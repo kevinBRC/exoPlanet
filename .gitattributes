@@ -1,4 +1,2 @@
-path/to/Oracle_JDK-23/lib/modules filter=lfs diff=lfs merge=lfs -text
-C/dev/exoPlanet/path/to/Oracle_JDK-23/lib/modules filter=lfs diff=lfs merge=lfs -text
 C:/dev/exoPlanet/path/to/Oracle_JDK-23/lib/modules filter=lfs diff=lfs merge=lfs -text
 Oracle_JDK-23/lib/modules filter=lfs diff=lfs merge=lfs -text
