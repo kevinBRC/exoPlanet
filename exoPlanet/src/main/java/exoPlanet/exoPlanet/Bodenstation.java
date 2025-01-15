@@ -186,7 +186,7 @@ public class Bodenstation {
 				System.out.println("Please choose: left, right, up or down");
 			}
 			
-			scan.close();
+			scan.close();	
 			direction = direction.toUpperCase();
 			String message = "{'type': 'command'\n 'content': 'MOVE_ROVER ID_" + id + "_" + direction + "}";
 			sendToServer(message);
