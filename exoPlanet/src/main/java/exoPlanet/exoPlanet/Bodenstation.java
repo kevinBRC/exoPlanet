@@ -1,4 +1,4 @@
-package exoplanet;
+package exoPlanet.exoPlanet;
 import java.io.*;
 import org.json.*;
 import java.net.*;
@@ -10,15 +10,15 @@ public class Bodenstation {
 	private int port;
 	private String databaseAddress;
 	private boolean hasNotification;
-	//private synchronized JSONOnject buffer;
-	//private synchronized JSONArray notifications;
+	private  JSONObject buffer;
+	private  JSONArray notifications;
 
 	class RoverManager extends Thread{
 		private int latestRoverNumber;
 		private PrintWriter writeInput;
 		private BufferedReader readInput;
 		private Socket client;
-		//private JSONArray roverAlive;
+		private JSONArray roverAlive;
 
         public RoverManager() 
 		{}
