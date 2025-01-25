@@ -4,6 +4,7 @@ import org.json.*;
 import java.net.*;
 import java.util.*;
 
+
 public class Bodenstation {
 	private DatabaseManager dm;
 	private RoverManager rm;
@@ -29,6 +30,10 @@ public class Bodenstation {
         	this.roverAlive.put("alreadyDeployed", new JSONArray());
 		}
 
+        /*
+         * @brief: connects to the rover server and build all reader/writer to it
+         * @retVal: boolean whether the connection was successful
+         */
 		public boolean connectToServer()
 		{
 			try 
@@ -45,9 +50,14 @@ public class Bodenstation {
 		}
 
 		@Override
+		/*
+		 * @brief: Reads the messages from the rover server as a thread
+		 */
 		public void run() {
 		    try {
 		        String serverMessage;
+		        
+		        // if a message is detected -> write into buffer of the Bodenstation
 		        while ((serverMessage = this.readInput.readLine()) != null) {
 		        	try 
 		        	{
@@ -74,6 +84,10 @@ public class Bodenstation {
 		    }
 		}
 
+		/*
+		 * @brief: Creates a rover in the local rover jsonObejct in order to use it later (maximum of 5 rover at the same time) and sends a create command 
+		 * @retVal: boolean whether the creation was successful
+		 */
 		public boolean createRover()
 		{	
 			if(this.roverAlive.getInt("amountOfRover") < 5) 
@@ -87,10 +101,8 @@ public class Bodenstation {
 				this.roverAlive.put("rover", newRover);								// put the newest values into the JSONObject
 				this.roverAlive.put("amountOfRover", newAmount);
 				
-				String message = "{'type': 'command'\n 'content': 'CREATE_ROVER ID_" + newId + "}";		
-				sendToServer(message);												// send create command
-				
-				return true;
+				String message = "{'type': 'CREATE',\n 'id':'" + newId +"'}";		
+				return sendToServer(message);
 			}
 			else 
 			{
@@ -99,7 +111,10 @@ public class Bodenstation {
 			
 		}
 
-		//TODO sends command to server to deploy a rover
+		/*
+		 * @brief: Sends a deployment command
+		 * @retVal: boolean whether the deployment was successful
+		 */
 		public boolean deployRover(int id)
 		{
 			int internId;
@@ -120,13 +135,15 @@ public class Bodenstation {
 			
 			this.roverAlive.getJSONArray("alreadyDeployded").put(id);				// add the id to the deployed ids
 			
-			String message = "{'type': 'command'\n 'content': 'DEPLOY_ROVER ID_" + id + "}";
-			sendToServer(message);
-			
-			return true;
+			String message = "{'type': 'DEPLOY',\n 'id:'" + id + "'}";			
+			return sendToServer(message);
 		}
 		
 		// TODO check if message received Server
+		/*
+		 * @brief: Sends a message to the rover server
+		 * @retVal: boolean whether the sending was successful
+		 */
 		public boolean sendToServer(String message) 
 		{
 			this.writeInput.print(message);
@@ -134,11 +151,19 @@ public class Bodenstation {
 			return true;
 		}
 		
+		/*
+		 * @brief: Returns all existing rover
+		 * @retVal: all existing rover
+		 */
 		public JSONObject getAllRoverAlive()
 		{
 			return this.roverAlive.getJSONObject("rover");
 		}
 		
+		/*
+		 * @brief: Sends an exiting command
+		 * @retVal: boolean whether the exiting was successful
+		 */
 		public boolean exitRover(int id)
 		{
 			if(!checkIfRoverAlive(id))
@@ -153,17 +178,114 @@ public class Bodenstation {
 			    }
 			}
 			
-			String message = "{'type': 'command'\n 'content': 'EXIT_ROVER ID_" + id + "}";
-			sendToServer(message);
-			
-			return true;
+			String message = "{'type': 'EXIT',\n 'id':'" + id + "'}";
+			return sendToServer(message);
 		}
 		
 		public void calcNewRoverPosition(JSONObject movedUnits) 
 		{
 		}
 		
-		public boolean move(int id)
+		/*
+		 * @brief: Sends a moving command
+		 * @retVal: boolean whether the moving was successful
+		 */
+		public boolean move(int id, boolean scanAfterwards)
+		{
+			if(!checkIfRoverAlive(id))
+				return false;
+			
+			boolean dirMatch = false;
+			String message;
+			Scanner scan = new Scanner(System.in);
+			System.out.println("Which direction do you want to go?");
+			System.out.println("Please choose: left, right, up or down");
+			String direction = "";
+			while(!dirMatch)
+			{
+				direction = scan.nextLine();
+				if (direction == "right" || direction == "left" || direction == "up" || direction == "down")
+				{
+					dirMatch = true;
+					break;
+				}
+				
+				System.out.println("Invalid direction!");
+				System.out.println("Please choose: left, right, up or down");
+			}
+			
+			scan.close();
+			direction = direction.toUpperCase();
+			
+			if (scanAfterwards) 
+			{				
+				message = "{'type': 'SCAN_MOVE',\n 'id':'" + id + ",\n 'direction':'" + direction + "'}";
+			}
+			else
+			{
+				message = "{'type': 'MOVE',\n 'id':'" + id + ",\n 'direction':'" + direction + "'}";
+			}
+			
+			return sendToServer(message);
+		}
+		
+		/*
+		 * @brief: Checks if a rover is alive
+		 * @retVal: boolean whether the rover is alive
+		 */
+		public boolean checkIfRoverAlive(int id) 
+		{
+			int tempId;
+			for(Object val : this.roverAlive.getJSONArray("rover"))					// check if the rover that wants to be exited is currently alive 
+			{
+				tempId = (int)val;
+				if (tempId == id)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+		
+		/*
+		 * @brief: Sends a landing command 
+		 * @retVal: boolean whether the landing was successful
+		 */
+		public boolean land(int id)
+		{
+			if(!checkIfRoverAlive(id))
+				return false;
+			int xCoord;
+			int yCoord;
+			
+			Scanner scan = new Scanner(System.in);
+			while(true)
+			{
+				try 
+				{
+					System.out.println("On what X-Coordinate you want to land?");
+					xCoord = scan.nextInt();
+					System.out.println("On what Y-Coordinate you want to land?");
+					yCoord = scan.nextInt();
+					break;
+				}
+				catch(Exception e)
+				{
+					System.out.println("Failure, input wasn't a digit");
+				}
+			}
+			scan.close();
+			
+			String message = "{'type': 'LAND',\n 'content':'" + id + "',\n 'x':'" + xCoord + "',\n 'y': '" + yCoord + "'}";
+			
+			return sendToServer(message);
+		}
+		
+		/*
+		 * @brief: Sends a rotate command
+		 * @retVal: boolean whether the rotation was successful
+		 */
+		public boolean rotate(int id)
 		{
 			if(!checkIfRoverAlive(id))
 				return false;
@@ -186,27 +308,55 @@ public class Bodenstation {
 				System.out.println("Please choose: left, right, up or down");
 			}
 			
-			scan.close();	
+			scan.close();
 			direction = direction.toUpperCase();
-			String message = "{'type': 'command'\n 'content': 'MOVE_ROVER ID_" + id + "_" + direction + "}";
-			sendToServer(message);
 			
-			return true;
+			String message = "{'type': 'ROTATE',\n 'id': '" + id + ",\n 'direction': '" + direction + "'}";
+			return sendToServer(message);
+		}
+		
+		/*
+		 * @brief: Sends a get position command
+		 * @retVal: boolean whether the getPos was successful
+		 */
+		public boolean getPos(int id) 
+		{
+			if(!checkIfRoverAlive(id))
+				return false;
+			
+			String message = "{'type': 'GETPOS',\n 'id': '" + id + "'}";
+			return sendToServer(message);
+			// The answer will be read by the run method and handled by the handleNotification method
+		}
+		
+		/*
+		 * @brief: Sends a charge command
+		 * @retVal: boolean whether the charge was successful
+		 */
+		public boolean charge(int id)
+		{
+			if(!checkIfRoverAlive(id))
+				return false;
+			
+			String message = "{'type': 'CHARGE',\n 'id': '" + id + "'}";
+			
+			return sendToServer(message);
 			
 		}
 		
-		public boolean checkIfRoverAlive(int id) 
+		/*
+		 * @brief: Sends a get charge command
+		 * @retVal: boolean whether the get charge was successful
+		 */
+		public boolean getCharge (int id)
 		{
-			int tempId;
-			for(Object val : this.roverAlive.getJSONArray("rover"))					// check if the rover that wants to be exited is currently alive 
-			{
-				tempId = (int)val;
-				if (tempId == id)
-				{
-					return true;
-				}
-			}
-			return false;
+			if(!checkIfRoverAlive(id))
+				return false;
+			
+			String message = "{'type': 'CHARGE',\n 'id': '" + id + "'}";
+			
+			return sendToServer(message);
+			// The answer will be read by the run method and handled by the handleNotification 
 		}
 		
 		
@@ -228,11 +378,14 @@ public class Bodenstation {
 		this.rm.start();
 	}
 
-	// TODO: program this method
+	/*
+	 * @brief: Executes a command based on the user input
+	 * @param: The user input
+	 */
 	private void handleUserInput(JSONArray input)
 	{
 		String command = "";
-		int digit = 0;
+		int digit = -1;
 		if(input.length() == 1)
 		{
 			command = input.getString(0);
@@ -243,68 +396,114 @@ public class Bodenstation {
 			digit = input.getInt(1);
 		}
 		
-		switch (command) {
-		
-			case "deplpoy":
-			case "DEPLOY":
-				this.rm.deployRover(digit);
-				break;
-		
-			case "create":
-			case "CREATE":
-				this.rm.createRover();
-				break;
-		
-			case "move":
-			case "MOVE":
-			
-				break;
-			case "land":
-			case "LAND":
-				break;
-			
-			case "scan":
-			case "SCAN":
-				break;
-			
-			case "mvscan":
-			case "MVSCAN":
-				break;
-			
-			case "rotate":
-			case "ROTATE":
-				break;
-			
-			case "exit":
-			case "EXIT":
-				break;
-
-			case "getpos":
-			case "GETPOS":
-				break;
-
-			case "charge":
-			case "CHARGE":
-				break;
+		try 
+		{
+			switch (command) 
+			{
 				
-			case "getcharge":
-			case "GETCHARGE":
-				break;
-			default:
-				System.err.println("Invalid Command: "+ input);
-				break;
+				
+				case "deplpoy":
+				case "DEPLOY":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed"); 
+					this.rm.deployRover(digit);
+					break;
+			
+				case "create":
+				case "CREATE":
+					this.rm.createRover();
+					break;
+			
+				case "move":
+				case "MOVE":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					this.rm.move(digit, false);
+					break;
+				case "land":
+				case "LAND":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					this.rm.land(digit);
+					break;
+				
+				case "scan":
+				case "SCAN":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					String message = "{'type': 'SCAN',\n 'id': '" + digit + "'}";
+					this.rm.sendToServer(message);
+					break;
+				
+				case "mvscan":
+				case "MVSCAN":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					this.rm.move(digit, true);
+					break;
+				
+				case "rotate":
+				case "ROTATE":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					this.rm.rotate(digit);
+					break;
+	
+				case "exit":
+				case "EXIT":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					this.rm.exitRover(digit);
+					break;
+	
+				case "getpos":
+				case "GETPOS":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					this.rm.getPos(digit);
+					break;
+	
+				case "charge":
+				case "CHARGE":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					this.rm.charge(digit);
+					break;
+					
+				case "getcharge":
+				case "GETCHARGE":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					this.rm.getCharge(digit);
+					break;
+				default:
+					System.err.println("Invalid Command: "+ input);
+					break;
 
+			}
 		}
+		catch(Exception e)
+		{
+			System.err.println("Invalid Command: " + input);
+		}
+		
+	
 
+		
 	}
 
 	// TODO programm this method
+	/*
+	 * @brief: Looks for new content within the buffer. If new content is detected it handles it
+	 */
 	private void handleNotification()
 	{
 
 	}
 
-
+	/*
+	 * @brief: reads the user input
+	 */
 	public void readUserInput() 
 	{
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in)))
@@ -354,13 +553,14 @@ public class Bodenstation {
 	}
 
 	
-	private void handleRoverServerMessage()
-	{
-	}
 	
 	// TODO deletes the oldest entry after it was worked through
+	/*
+	 * @brief: deletes the oldest buffer entry
+	 */
 	private void updateBuffer()
 	{
+		this.buffer.poll();
 	}
 	
 
