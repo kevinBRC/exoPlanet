@@ -8,10 +8,10 @@
 {
     "amountOfRover": "int",
     "latestId": "int",
-    "rover": ["JSONArray of maximum 5 Rover"],
+    "rover": ["JSONArray, maximum 5 Rover"],
     "alreadyDeployed": ["JSONArray"]
 }
-```
+```SCAN_MOVE
 
 ### Commands structure
 ```json
@@ -22,17 +22,17 @@
 ```
 
 ### Commands
-- Deploy: {"type": "command"\n , "content": "DEPLOY_ROVER_ID_{roverId}"}
-- Create: {"type": "command"\n , "content": "CREATE_ROVER_ID_{roverId}"}
-- Move: {"type": "command"\n , "content": "MOVE_ROVER_ID_{roverId}_{direction}"}
-- Land: {"type": "command"\n , "content": "LAND_ROVER_ID_{roverId}_X_{xCoord}_Y_{yCoord}"}
-- Scan: {"type": "command"\n , "content": "SCAN_ROVER_ID_{roverId}"}
-- Scan and Move: {"type": "command"\n , "content": "SCAN_MOVE_ROVER_ID_{roverId}_{direction}"}
-- rotate: {"type": "command"\n , "content": "ROTATE_ROVER_ID_{roverId}_{direction}"}
-- exit: {"type": "command"\n , "content": "EXIT_ROVER_ID_{roverId}"}
-- get Position: {"type": "command"\n , "content": "GETPOS_ROVER_ID_{roverId}"}
-- charge: {"type": "command"\n , "content": "CHARGE_ROVER_ID_{roverId}"}
-- get Charge: {"type": "command"\n , "content": "GET_CHARGE_ROVER_ID_{roverId}"}
+- Deploy: {"type": "DEPLOY"\n, "id": "{roverId}"}
+- Create: {"type": "CREATE"\n, "id": "{roverId}"}
+- Move: {"type": "MOVE"\n, "id": "{roverId}"\n, "direction": {direction}"}
+- Land: {"type": "LAND"\n, "id": "{roverId}\n, "x": "{xCoord}"\n, "y": "{yCoord}"}
+- Scan: {"type": "SCAN"\n, "id": "{roverId}"}
+- Scan and Move: {"type": "SCAN_MOVE"\n, "content": "{roverId}"\n, "direction": "{direction}"}
+- rotate: {"type": "ROTATE"\n , "id": "{roverId}"\n, "direction": "{direction}"}
+- exit: {"type": "EXIT"\n, "id": "{roverId}"}
+- get Position: {"type": "GETPOS"\n, "id": "{roverId}"}
+- charge: {"type": "CHARGE"\n , "id": "{roverId}"}
+- get Charge: {"type": "GET_CHARGE"\n , "id": "{roverId}"}
 
 
 ## TODOs Kevin
