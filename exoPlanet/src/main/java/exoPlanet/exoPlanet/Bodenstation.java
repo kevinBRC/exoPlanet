@@ -3,6 +3,9 @@ import java.io.*;
 import org.json.*;
 import java.net.*;
 import java.util.*;
+import javax.swing.*;
+import javax.swing.border.TitledBorder;
+import java.awt.*;
 
 
 public class Bodenstation {
@@ -14,6 +17,15 @@ public class Bodenstation {
 	private boolean hasNotification;
 	private Queue<JSONObject> buffer;
 	private JSONArray notifications;
+	private BufferedReader reader;
+	
+	private JFrame frame;
+    private JTabbedPane tabbedPane;
+    private JPanel mainmenuPanel;
+    private JPanel roverPanel;
+    private JPanel roverContainer;
+    private Map<Integer, JPanel> roverControlPanels = new HashMap<>();
+    private JPanel mapPanel;
 
 	class RoverManager extends Thread{
 		private PrintWriter writeInput;
@@ -24,10 +36,10 @@ public class Bodenstation {
         public RoverManager() 
 		{
         	this.roverAlive = new JSONObject();
-        	this.roverAlive.put("amountOfRover", 0);
-        	this.roverAlive.put("latestId", 0);
-        	this.roverAlive.put("rover", new JSONArray());
-        	this.roverAlive.put("alreadyDeployed", new JSONArray());
+        	this.roverAlive.put("amountOfRover", 0);							// amount of active rover (created and not exited)
+        	this.roverAlive.put("latestId", 0);									// latest given id
+        	this.roverAlive.put("rover", new JSONArray());						// ids of deployed rover that aren't exited yet
+        	this.roverAlive.put("alreadyDeployed", new JSONArray());			// all ids of deployed rover (also those who are exited)
 		}
 
         /*
@@ -49,10 +61,10 @@ public class Bodenstation {
 			}
 		}
 
-		@Override
+		
 		/*
 		 * @brief: Reads the messages from the rover server as a thread
-		 */
+		 
 		public void run() {
 		    try {
 		        String serverMessage;
@@ -102,7 +114,18 @@ public class Bodenstation {
 				this.roverAlive.put("amountOfRover", newAmount);
 				
 				String message = "{'type': 'CREATE',\n 'id':'" + newId +"'}";		
-				return sendToServer(message);
+				boolean success = sendToServer(message);
+				
+				if(success)
+				{
+					success = deployRover(newId);
+				}
+				
+				if(success) {
+                    Bodenstation.this.addRoverControlPanel(newId); 					// GUI aktualisieren
+                }
+				
+				return success;
 			}
 			else 
 			{
@@ -124,6 +147,7 @@ public class Bodenstation {
 			if(id > latestId)														// id to deploy is higher than the latest created rover
 				return false;
 			
+			// check if the rover was already deployed
 			for(Object value: usedId) 
 			{
 				internId = (int)value;
@@ -133,7 +157,7 @@ public class Bodenstation {
 				}
 			}
 			
-			this.roverAlive.getJSONArray("alreadyDeployded").put(id);				// add the id to the deployed ids
+			this.roverAlive.getJSONArray("alreadyDeployed").put(id);				// add the id to the deployed ids
 			
 			String message = "{'type': 'DEPLOY',\n 'id:'" + id + "'}";			
 			return sendToServer(message);
@@ -146,8 +170,10 @@ public class Bodenstation {
 		 */
 		public boolean sendToServer(String message) 
 		{
-			this.writeInput.print(message);
-			this.writeInput.flush();			
+			//this.writeInput.print(message);
+			//this.writeInput.flush();			
+			//turn true;
+			System.out.println("Sending message: "+ message);
 			return true;
 		}
 		
@@ -178,9 +204,20 @@ public class Bodenstation {
 			    }
 			}
 			
+			int newAmount = (this.roverAlive.getInt("amountOfRover") - 1);
+			this.roverAlive.put("amountOfRover", newAmount);
+			
 			String message = "{'type': 'EXIT',\n 'id':'" + id + "'}";
-			return sendToServer(message);
-		}
+			boolean success = sendToServer(message);
+            
+            if(success) 
+            {
+                Bodenstation.this.removeRoverControlPanel(id); // GUI aktualisieren
+            }
+            
+            return success;
+        }
+		
 		
 		public void calcNewRoverPosition(JSONObject movedUnits) 
 		{
@@ -197,14 +234,22 @@ public class Bodenstation {
 			
 			boolean dirMatch = false;
 			String message;
-			Scanner scan = new Scanner(System.in);
 			System.out.println("Which direction do you want to go?");
 			System.out.println("Please choose: left, right, up or down");
 			String direction = "";
 			while(!dirMatch)
 			{
-				direction = scan.nextLine();
-				if (direction == "right" || direction == "left" || direction == "up" || direction == "down")
+				try 
+				{
+					direction = reader.readLine();
+				} 
+				
+				catch (IOException e) 
+				{
+					e.printStackTrace();
+				}
+				
+				if (direction.equals("right") || direction.equals("left") || direction.equals("up") || direction.equals("down"))
 				{
 					dirMatch = true;
 					break;
@@ -214,7 +259,6 @@ public class Bodenstation {
 				System.out.println("Please choose: left, right, up or down");
 			}
 			
-			scan.close();
 			direction = direction.toUpperCase();
 			
 			if (scanAfterwards) 
@@ -291,14 +335,22 @@ public class Bodenstation {
 				return false;
 			
 			boolean dirMatch = false;
-			Scanner scan = new Scanner(System.in);
 			System.out.println("Which direction do you want to go?");
 			System.out.println("Please choose: left, right, up or down");
 			String direction = "";
 			while(!dirMatch)
 			{
-				direction = scan.nextLine();
-				if (direction == "right" || direction == "left" || direction == "up" || direction == "down")
+				try 
+				{
+					direction = reader.readLine();
+				} 
+				
+				catch (IOException e) 
+				{
+					e.printStackTrace();
+				}
+				
+				if (direction.equals("right") || direction.equals("left") || direction.equals("up") || direction.equals("down"))
 				{
 					dirMatch = true;
 					break;
@@ -308,7 +360,6 @@ public class Bodenstation {
 				System.out.println("Please choose: left, right, up or down");
 			}
 			
-			scan.close();
 			direction = direction.toUpperCase();
 			
 			String message = "{'type': 'ROTATE',\n 'id': '" + id + ",\n 'direction': '" + direction + "'}";
@@ -362,21 +413,189 @@ public class Bodenstation {
 		
 		
 			
+	
 	}
-
-	// TODO: parameters for DatabaseManager and RoverManager
+	// TODO: parameters for DatabaseManager
 	public Bodenstation(String serverAddress, int port, String databaseAddress)
 	{
+		this.reader = new BufferedReader(new InputStreamReader(System.in));
 		this.serverAddress = serverAddress;
 		this.port = port;
 		this.databaseAddress = databaseAddress;
 		this.hasNotification = false;
-		this.dm = new DatabaseManager();
+		this.dm = new DatabaseManager(databaseAddress);
 		this.rm = new RoverManager();
 		this.buffer = new ArrayDeque<>();
 		this.notifications = new JSONArray();
-		this.rm.start();
+		//this.rm.start();
+		
+		
 	}
+	
+	 /*
+     * @brief: Initializes the GUI with tabs "Hauptmenü", "Rover" and "Karte"
+     */
+    private void initializeGUI() {
+        // Erstelle das Hauptfenster
+        frame = new JFrame("Bodenstation GUI");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 600);
+        frame.setLocationRelativeTo(null); // Zentriert das Fenster
+
+        // Erstelle das TabbedPane
+        tabbedPane = new JTabbedPane();
+        JTabbedPane roverSubTabbedPane = new JTabbedPane();
+        
+
+        JPanel roverSteuerungPanel = new JPanel();
+        JPanel roverStatusPanel = new JPanel();
+        
+
+        // Erstelle die Panels für jeden Tab
+        mainmenuPanel = new JPanel();
+        mapPanel = new JPanel();
+        roverPanel = new JPanel();
+        roverContainer = new JPanel();
+        roverContainer.setLayout(new BoxLayout(roverContainer, BoxLayout.Y_AXIS));
+        
+        roverPanel.setLayout(new BorderLayout());
+        roverPanel.add(new JScrollPane(roverContainer), BorderLayout.CENTER);
+
+        JButton btnConnect = new JButton("Connect to rover server");
+        btnConnect.addActionListener(e -> {
+        	boolean success = this.rm.connectToServer();
+        	if (success)
+        	{
+        		JOptionPane.showMessageDialog(frame, "Connected to rover server");
+        	}
+        	else
+        	{
+        		JOptionPane.showMessageDialog(frame, "Failed to connect to rover server");
+        	}
+        });    
+        
+        
+        JButton btnCreatRover = new JButton("Create Rover");
+        btnCreatRover.addActionListener(e -> {
+        	this.rm.createRover();
+        });
+       
+        mainmenuPanel.add(btnConnect);
+        mainmenuPanel.add(btnCreatRover);
+        
+        // Füge die Panels als Tabs hinzu
+        tabbedPane.addTab("Mainmenu", mainmenuPanel);
+        tabbedPane.addTab("Rover", roverPanel);
+        tabbedPane.addTab("Map", mapPanel);
+        
+        
+        
+        // Füge das TabbedPane zum Frame hinzu
+        frame.add(tabbedPane, BorderLayout.CENTER);
+
+        // Mache das Fenster sichtbar
+        frame.setVisible(true);
+    }
+    
+    /*
+     * @brief: Fügt ein neues Rover-Kontrollpanel zur GUI hinzu
+     */
+    public void addRoverControlPanel(int roverId) {
+        SwingUtilities.invokeLater(() -> {
+            JPanel panel = new JPanel();
+            panel.setBorder(new TitledBorder("Rover " + roverId));
+            panel.setLayout(new FlowLayout());
+
+            // Erstelle Buttons für die verschiedenen Befehle
+            JButton btnMove = new JButton("Move");
+            btnMove.addActionListener(e -> {
+                JSONArray cmd = new JSONArray();
+                cmd.put("move");
+                cmd.put(roverId);
+                handleUserInput(cmd);
+            });
+
+            JButton btnLand = new JButton("Land");
+            btnLand.addActionListener(e -> {
+                JSONArray cmd = new JSONArray();
+                cmd.put("land");
+                cmd.put(roverId);
+                handleUserInput(cmd);
+            });
+
+            JButton btnRotate = new JButton("Rotate");
+            btnRotate.addActionListener(e -> {
+                JSONArray cmd = new JSONArray();
+                cmd.put("rotate");
+                cmd.put(roverId);
+                handleUserInput(cmd);
+            });
+
+            JButton btnExit = new JButton("Exit");
+            btnExit.addActionListener(e -> {
+                JSONArray cmd = new JSONArray();
+                cmd.put("exit");
+                cmd.put(roverId);
+                handleUserInput(cmd);
+            });
+
+            JButton btnGetPos = new JButton("Get Position");
+            btnGetPos.addActionListener(e -> {
+                JSONArray cmd = new JSONArray();
+                cmd.put("getpos");
+                cmd.put(roverId);
+                handleUserInput(cmd);
+            });
+
+            JButton btnCharge = new JButton("Charge");
+            btnCharge.addActionListener(e -> {
+                JSONArray cmd = new JSONArray();
+                cmd.put("charge");
+                cmd.put(roverId);
+                handleUserInput(cmd);
+            });
+
+            JButton btnGetCharge = new JButton("Get Charge");
+            btnGetCharge.addActionListener(e -> {
+                JSONArray cmd = new JSONArray();
+                cmd.put("getcharge");
+                cmd.put(roverId);
+                handleUserInput(cmd);
+            });
+
+            // Füge die Buttons dem Panel hinzu
+            panel.add(btnMove);
+            panel.add(btnLand);
+            panel.add(btnRotate);
+            panel.add(btnExit);
+            panel.add(btnGetPos);
+            panel.add(btnCharge);
+            panel.add(btnGetCharge);
+
+            // Füge das Rover-Panel dem Rover-Container hinzu
+            roverContainer.add(panel);
+            roverContainer.revalidate();
+            roverContainer.repaint();
+
+            // Verfolge das Panel in der Map
+            roverControlPanels.put(roverId, panel);
+        });
+    }
+    
+    /*
+     * @brief: Entfernt das Rover-Kontrollpanel aus der GUI
+     */
+    public void removeRoverControlPanel(int roverId) {
+        SwingUtilities.invokeLater(() -> {
+            JPanel panel = roverControlPanels.get(roverId);
+            if (panel != null) {
+                roverContainer.remove(panel);
+                roverContainer.revalidate();
+                roverContainer.repaint();
+                roverControlPanels.remove(roverId);
+            }
+        });
+    }
 
 	/*
 	 * @brief: Executes a command based on the user input
@@ -402,7 +621,7 @@ public class Bodenstation {
 			{
 				
 				
-				case "deplpoy":
+				case "deploy":
 				case "DEPLOY":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed"); 
@@ -482,7 +701,7 @@ public class Bodenstation {
 
 			}
 		}
-		catch(Exception e)
+		catch(IllegalArgumentException e)
 		{
 			System.err.println("Invalid Command: " + input);
 		}
@@ -506,12 +725,12 @@ public class Bodenstation {
 	 */
 	public void readUserInput() 
 	{
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in)))
+		try
 		{
 			System.out.println("The Groundstation is ready for commands:");
 			System.out.println("Command Syntax: {command}_{Digit if needed}");
 			String input;
-			while ((input = reader.readLine()) != null) 
+			while ((input = this.reader.readLine()) != null) 
 			{
                 if ("disconnect".equalsIgnoreCase(input)) 
 				{
@@ -521,8 +740,7 @@ public class Bodenstation {
                 
                 if (input.contains("_"))
                 {
-                	try 
-                	{
+                	
                 		JSONArray commandArray = new JSONArray();
                     	String[] splitInput = input.split("_");
             			String command = splitInput[0];
@@ -530,11 +748,6 @@ public class Bodenstation {
                     	commandArray.put(command);
                     	commandArray.put(digit);
                     	handleUserInput(commandArray);
-                	}
-                	catch(Exception e)
-                	{
-                		System.err.println("Invalid ID: " + input);
-                	}
                 	
                 }
                 else
@@ -548,13 +761,11 @@ public class Bodenstation {
 		}   
 		catch (IOException ex)
 		{
-			System.out.println("Fehler! Konsole konnte nicht eingelesen werden!");
+			System.err.println("Error during reading user input: " + ex);
 		}
 	}
 
 	
-	
-	// TODO deletes the oldest entry after it was worked through
 	/*
 	 * @brief: deletes the oldest buffer entry
 	 */
@@ -567,9 +778,11 @@ public class Bodenstation {
 	
 
 	
+
+	
 	public static void main(String[] args) {
 		Bodenstation bs = new Bodenstation(null, 0, null);
-		bs.readUserInput();
+		bs.initializeGUI();
 		
 	}
 
