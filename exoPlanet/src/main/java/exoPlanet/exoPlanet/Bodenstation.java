@@ -227,47 +227,20 @@ public class Bodenstation {
 		 * @brief: Sends a moving command
 		 * @retVal: boolean whether the moving was successful
 		 */
-		public boolean move(int id, boolean scanAfterwards)
+		public boolean move(int id, boolean scanAfterwards, String direction)
 		{
 			if(!checkIfRoverAlive(id))
 				return false;
 			
-			boolean dirMatch = false;
 			String message;
-			System.out.println("Which direction do you want to go?");
-			System.out.println("Please choose: left, right, up or down");
-			String direction = "";
-			while(!dirMatch)
-			{
-				try 
-				{
-					direction = reader.readLine();
-				} 
-				
-				catch (IOException e) 
-				{
-					e.printStackTrace();
-				}
-				
-				if (direction.equals("right") || direction.equals("left") || direction.equals("up") || direction.equals("down"))
-				{
-					dirMatch = true;
-					break;
-				}
-				
-				System.out.println("Invalid direction!");
-				System.out.println("Please choose: left, right, up or down");
-			}
-			
-			direction = direction.toUpperCase();
 			
 			if (scanAfterwards) 
 			{				
-				message = "{'type': 'SCAN_MOVE',\n 'id':'" + id + ",\n 'direction':'" + direction + "'}";
+				message = "{'type': 'SCAN_MOVE',\n 'id':'" + id + ",\n 'direction':'" + direction.toUpperCase() + "'}";
 			}
 			else
 			{
-				message = "{'type': 'MOVE',\n 'id':'" + id + ",\n 'direction':'" + direction + "'}";
+				message = "{'type': 'MOVE',\n 'id':'" + id + ",\n 'direction':'" + direction.toUpperCase() + "'}";
 			}
 			
 			return sendToServer(message);
@@ -295,32 +268,12 @@ public class Bodenstation {
 		 * @brief: Sends a landing command 
 		 * @retVal: boolean whether the landing was successful
 		 */
-		public boolean land(int id)
+		public boolean land(int id, int x, int y)
 		{
 			if(!checkIfRoverAlive(id))
 				return false;
-			int xCoord;
-			int yCoord;
 			
-			Scanner scan = new Scanner(System.in);
-			while(true)
-			{
-				try 
-				{
-					System.out.println("On what X-Coordinate you want to land?");
-					xCoord = scan.nextInt();
-					System.out.println("On what Y-Coordinate you want to land?");
-					yCoord = scan.nextInt();
-					break;
-				}
-				catch(Exception e)
-				{
-					System.out.println("Failure, input wasn't a digit");
-				}
-			}
-			scan.close();
-			
-			String message = "{'type': 'LAND',\n 'content':'" + id + "',\n 'x':'" + xCoord + "',\n 'y': '" + yCoord + "'}";
+			String message = "{'type': 'LAND',\n 'id':'" + id + "',\n 'x':'" + x + "',\n 'y': '" + y + "'}";
 			
 			return sendToServer(message);
 		}
@@ -329,40 +282,13 @@ public class Bodenstation {
 		 * @brief: Sends a rotate command
 		 * @retVal: boolean whether the rotation was successful
 		 */
-		public boolean rotate(int id)
+		public boolean rotate(int id, String direction)
 		{
 			if(!checkIfRoverAlive(id))
 				return false;
 			
-			boolean dirMatch = false;
-			System.out.println("Which direction do you want to go?");
-			System.out.println("Please choose: left, right, up or down");
-			String direction = "";
-			while(!dirMatch)
-			{
-				try 
-				{
-					direction = reader.readLine();
-				} 
-				
-				catch (IOException e) 
-				{
-					e.printStackTrace();
-				}
-				
-				if (direction.equals("right") || direction.equals("left") || direction.equals("up") || direction.equals("down"))
-				{
-					dirMatch = true;
-					break;
-				}
-				
-				System.out.println("Invalid direction!");
-				System.out.println("Please choose: left, right, up or down");
-			}
 			
-			direction = direction.toUpperCase();
-			
-			String message = "{'type': 'ROTATE',\n 'id': '" + id + ",\n 'direction': '" + direction + "'}";
+			String message = "{'type': 'ROTATE',\n 'id': '" + id + ",\n 'direction': '" + direction.toUpperCase() + "'}";
 			return sendToServer(message);
 		}
 		
@@ -444,12 +370,6 @@ public class Bodenstation {
 
         // Erstelle das TabbedPane
         tabbedPane = new JTabbedPane();
-        JTabbedPane roverSubTabbedPane = new JTabbedPane();
-        
-
-        JPanel roverSteuerungPanel = new JPanel();
-        JPanel roverStatusPanel = new JPanel();
-        
 
         // Erstelle die Panels für jeden Tab
         mainmenuPanel = new JPanel();
@@ -477,7 +397,14 @@ public class Bodenstation {
         
         JButton btnCreatRover = new JButton("Create Rover");
         btnCreatRover.addActionListener(e -> {
-        	this.rm.createRover();
+        	if(this.rm.roverAlive.getInt("amountOfRover") < 5)
+        	{        		
+        		this.rm.createRover();
+        	}
+        	else
+        	{
+        		JOptionPane.showMessageDialog(frame, "Maximum of 5 Rover reached");
+        	}
         });
        
         mainmenuPanel.add(btnConnect);
@@ -487,8 +414,6 @@ public class Bodenstation {
         tabbedPane.addTab("Mainmenu", mainmenuPanel);
         tabbedPane.addTab("Rover", roverPanel);
         tabbedPane.addTab("Map", mapPanel);
-        
-        
         
         // Füge das TabbedPane zum Frame hinzu
         frame.add(tabbedPane, BorderLayout.CENTER);
@@ -509,26 +434,120 @@ public class Bodenstation {
             // Erstelle Buttons für die verschiedenen Befehle
             JButton btnMove = new JButton("Move");
             btnMove.addActionListener(e -> {
-                JSONArray cmd = new JSONArray();
-                cmd.put("move");
-                cmd.put(roverId);
-                handleUserInput(cmd);
+            	String[] options = {"Left", "Right", "Up", "Down"};
+            	String direction = (String) JOptionPane.showInputDialog(
+                        frame,
+                        "Choose the direction:",
+                        "Move Rover",
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        options,
+                        "Left");
+                
+                if (direction != null) {
+                    // Erstelle den JSON-Befehl mit Richtung
+                    JSONArray cmd = new JSONArray();
+                    cmd.put("move");
+                    cmd.put(roverId);
+                    cmd.put(direction.toLowerCase());
+                    handleUserInput(cmd);
+                }
+            });
+            
+            JButton btnMoveScan = new JButton("Move and Scan");
+            btnMove.addActionListener(e -> {
+            	String[] options = {"Left", "Right", "Up", "Down"};
+            	String direction = (String) JOptionPane.showInputDialog(
+                        frame,
+                        "Choose the direction:",
+                        "Move Rover",
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        options,
+                        "Left");
+                
+                if (direction != null) {
+                    // Erstelle den JSON-Befehl mit Richtung
+                    JSONArray cmd = new JSONArray();
+                    cmd.put("mvscan");
+                    cmd.put(roverId);
+                    cmd.put(direction.toLowerCase());
+                    handleUserInput(cmd);
+                }
             });
 
             JButton btnLand = new JButton("Land");
             btnLand.addActionListener(e -> {
-                JSONArray cmd = new JSONArray();
-                cmd.put("land");
-                cmd.put(roverId);
-                handleUserInput(cmd);
+            	// Erstellen Sie ein Panel mit zwei Labels und zwei Textfeldern
+                JPanel panelCoord = new JPanel(new GridLayout(2, 2, 5, 5));
+                
+                JLabel lblX = new JLabel("X-Coordinate:");
+                JTextField txtX = new JTextField();
+                
+                JLabel lblY = new JLabel("Y-Coordinate:");
+                JTextField txtY = new JTextField();
+                
+                panelCoord.add(lblX);
+                panelCoord.add(txtX);
+                panelCoord.add(lblY);
+                panelCoord.add(txtY);
+                
+                // Zeigen Sie das Dialogfenster an
+                int result = JOptionPane.showConfirmDialog(
+                    frame, 
+                    panelCoord, 
+                    "Enter Coordinates", 
+                    JOptionPane.OK_CANCEL_OPTION, 
+                    JOptionPane.PLAIN_MESSAGE
+                );
+                
+                if (result == JOptionPane.OK_OPTION) {
+                    try {
+                        // Versuchen Sie, die eingegebenen Werte als Ganzzahlen zu parsen
+                        int x = Integer.parseInt(txtX.getText().trim());
+                        int y = Integer.parseInt(txtY.getText().trim());
+                        
+                        // Erstellen Sie den JSON-Befehl
+                        JSONArray cmd = new JSONArray();
+                        cmd.put("land"); // Beispielbefehl, passen Sie ihn nach Bedarf an
+                        cmd.put(roverId);
+                        cmd.put(x);
+                        cmd.put(y);
+                        
+                        // Führen Sie den Befehl aus
+                        handleUserInput(cmd);
+                    } catch (NumberFormatException ex) {
+                        // Zeigen Sie eine Fehlermeldung, wenn die Eingabe keine gültigen Zahlen sind
+                        JOptionPane.showMessageDialog(
+                            frame, 
+                            "Please enter valid integers for both coordinates.", 
+                            "Invalid Input", 
+                            JOptionPane.ERROR_MESSAGE
+                        );
+                    }
+                }
             });
 
             JButton btnRotate = new JButton("Rotate");
             btnRotate.addActionListener(e -> {
-                JSONArray cmd = new JSONArray();
-                cmd.put("rotate");
-                cmd.put(roverId);
-                handleUserInput(cmd);
+            	String[] options = {"Left", "Right", "Up", "Down"};
+            	String direction = (String) JOptionPane.showInputDialog(
+                        frame,
+                        "Choose the direction:",
+                        "Move Rover",
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        options,
+                        "Left");
+                
+                if (direction != null) {
+                    // Erstelle den JSON-Befehl mit Richtung
+                    JSONArray cmd = new JSONArray();
+                    cmd.put("move");
+                    cmd.put(roverId);
+                    cmd.put(direction.toLowerCase());
+                    handleUserInput(cmd);
+                }
             });
 
             JButton btnExit = new JButton("Exit");
@@ -565,6 +584,7 @@ public class Bodenstation {
 
             // Füge die Buttons dem Panel hinzu
             panel.add(btnMove);
+            panel.add(btnMoveScan);
             panel.add(btnLand);
             panel.add(btnRotate);
             panel.add(btnExit);
@@ -605,6 +625,8 @@ public class Bodenstation {
 	{
 		String command = "";
 		int digit = -1;
+		String appendix = "";
+		int[] coords = new int[]{-1, -1};
 		if(input.length() == 1)
 		{
 			command = input.getString(0);
@@ -613,6 +635,18 @@ public class Bodenstation {
 		{
 			command = input.getString(0);
 			digit = input.getInt(1);
+		}
+		else if(input.length() == 3)
+		{
+			command = input.getString(0);
+			digit = input.getInt(1);
+			appendix = input.getString(2);
+		}
+		else if(input.length() == 4)
+		{
+			command = input.getString(0);
+			digit = input.getInt(1);
+			coords = new int[]{input.getInt(2), input.getInt(3)};
 		}
 		
 		try 
@@ -637,13 +671,17 @@ public class Bodenstation {
 				case "MOVE":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
-					this.rm.move(digit, false);
+					if (appendix.equals(""))
+						throw new IllegalArgumentException("No appendix was passed");
+					this.rm.move(digit, false, appendix);
 					break;
 				case "land":
 				case "LAND":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
-					this.rm.land(digit);
+					if (coords[0] == -1 && coords[1] == -1)
+						throw new IllegalArgumentException("No Coords was passed");
+					this.rm.land(digit, coords[0], coords[1]);
 					break;
 				
 				case "scan":
@@ -658,14 +696,18 @@ public class Bodenstation {
 				case "MVSCAN":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
-					this.rm.move(digit, true);
+					if (appendix.equals(""))
+						throw new IllegalArgumentException("No appendix was passed");
+					this.rm.move(digit, true, appendix);
 					break;
 				
 				case "rotate":
 				case "ROTATE":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
-					this.rm.rotate(digit);
+					if (appendix.equals(""))
+						throw new IllegalArgumentException("No appendix was passed");
+					this.rm.rotate(digit, appendix);
 					break;
 	
 				case "exit":
