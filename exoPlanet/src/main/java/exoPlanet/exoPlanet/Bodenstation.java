@@ -2,6 +2,9 @@ package exoPlanet.exoPlanet;
 import java.io.*;
 import org.json.*;
 import java.net.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -21,6 +24,7 @@ public class Bodenstation {
 	private Queue<JSONObject> buffer;
 	private JSONArray notifications;
 	private BufferedReader reader;
+	private JSONObject allRoverInformation;
 	
 	private JFrame frame;
     private JTabbedPane tabbedPane;
@@ -228,15 +232,11 @@ public class Bodenstation {
         }
 		
 		
-		public void calcNewRoverPosition(JSONObject movedUnits) 
-		{
-		}
-		
 		/*
 		 * @brief: Sends a moving command
 		 * @retVal: boolean whether the moving was successful
 		 */
-		public boolean move(int id, boolean scanAfterwards, String direction)
+		public boolean move(int id, boolean scanAfterwards)
 		{
 			if(!checkIfRoverAlive(id))
 				return false;
@@ -244,7 +244,6 @@ public class Bodenstation {
 			JSONObject message = new JSONObject();
 			
 			message.put("id", id);
-			message.put("direction", direction.toUpperCase());
 			if (scanAfterwards) 
 			{				
 				message.put("type", "SCAN_MOVE");
@@ -402,8 +401,7 @@ public class Bodenstation {
 		this.buffer = new ArrayDeque<>();
 		this.notifications = new JSONArray();
 		//this.rm.start();
-		
-		
+	
 	}
 	
 	 /*
@@ -480,46 +478,22 @@ public class Bodenstation {
             // Erstelle Buttons für die verschiedenen Befehle
             JButton btnMove = new JButton("Move");
             btnMove.addActionListener(e -> {
-            	String[] options = {"Left", "Right", "Up", "Down"};
-            	String direction = (String) JOptionPane.showInputDialog(
-                        frame,
-                        "Choose the direction:",
-                        "Move Rover",
-                        JOptionPane.PLAIN_MESSAGE,
-                        null,
-                        options,
-                        "Left");
+
+                JSONArray cmd = new JSONArray();
+                cmd.put("move");
+                cmd.put(roverId);
+                handleUserInput(cmd);
                 
-                if (direction != null) {
-                    // Erstelle den JSON-Befehl mit Richtung
-                    JSONArray cmd = new JSONArray();
-                    cmd.put("move");
-                    cmd.put(roverId);
-                    cmd.put(direction.toLowerCase());
-                    handleUserInput(cmd);
-                }
             });
             
             JButton btnMoveScan = new JButton("Scan and Move");
             btnMove.addActionListener(e -> {
-            	String[] options = {"Left", "Right", "Up", "Down"};
-            	String direction = (String) JOptionPane.showInputDialog(
-                        frame,
-                        "Choose the direction:",
-                        "Move Rover",
-                        JOptionPane.PLAIN_MESSAGE,
-                        null,
-                        options,
-                        "Left");
-                
-                if (direction != null) {
-                    // Erstelle den JSON-Befehl mit Richtung
+
                     JSONArray cmd = new JSONArray();
                     cmd.put("mvscan");
                     cmd.put(roverId);
-                    cmd.put(direction.toLowerCase());
                     handleUserInput(cmd);
-                }
+                
             });
 
             JButton btnLand = new JButton("Land");
@@ -580,7 +554,7 @@ public class Bodenstation {
 
             JButton btnRotate = new JButton("Rotate");
             btnRotate.addActionListener(e -> {
-            	String[] options = {"Left", "Right", "Up", "Down"};
+            	String[] options = {"Left", "Right"};
             	String direction = (String) JOptionPane.showInputDialog(
                         frame,
                         "Choose the direction:",
@@ -737,18 +711,13 @@ public class Bodenstation {
 					this.rm.deployRover(digit);
 					break;
 			
-				case "create":
-				case "CREATE":
-					this.rm.createRover();
-					break;
-			
 				case "move":
 				case "MOVE":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
 					if (appendix.equals(""))
 						throw new IllegalArgumentException("No appendix was passed");
-					this.rm.move(digit, false, appendix);
+					this.rm.move(digit, false);
 					break;
 					
 				// TODO add planet to land on
@@ -775,7 +744,7 @@ public class Bodenstation {
 						throw new IllegalArgumentException("No digit was passed");
 					if (appendix.equals(""))
 						throw new IllegalArgumentException("No appendix was passed");
-					this.rm.move(digit, true, appendix);
+					this.rm.move(digit, true);
 					break;
 				
 				case "rotate":
@@ -909,17 +878,35 @@ public class Bodenstation {
 	{
 		JSONObject entry = this.buffer.poll();
 		String type = entry.getString("type");
+		boolean success = entry.getBoolean("success");
 		switch (type) 
 		{
 			case "DEPLOY":
-				boolean success = entry.getBoolean("success");
+				
 				if (success)
 				{
-					
+					this.dm.insertRover(entry.getInt("id"), "rover", entry.getInt("planet"), LocalDateTime.now(), "deploy", 1, entry.getInt("surface"), entry.getInt("direction"), entry.getJSONArray("position").getInt(0), entry.getJSONArray("position").getInt(1), LocalDateTime.now(), "rover deployed");
+					this.dm.insertLastActivity("Deploy", success);
+				}
+				else
+				{
+					this.dm.insertLastActivity("Deploy", success);
 				}
 				
-			case "CREATE":
 			case "MOVE":
+				if (success)
+				{
+					this.dm.insertLastActivity("Move", success);
+					this.dm.insertRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
+				}
+				else
+				{
+					this.dm.insertLastActivity("Move", success);
+					if (entry.getBoolean("crashed"))
+					{
+						this.dm.insertStatusHistory(entry.getInt("id"), 1, 1, true, "crashed");
+					}
+				}
 			case "LAND":
 			case "SCAN":
 			case "MOVE_SCAN":

@@ -13,6 +13,39 @@
 }
 ```
 
+### allRoverInformation Datastructure
+```json
+{
+    "ID{digit}": {
+        "position": [x, y],
+        "direction": "String",
+        "crashed": "Boolean" 
+    },
+}
+```
+
+### mapInformation Datastructure
+```json
+{
+    "Planet": 
+    [
+        "rows": "int",
+        "cols": "int"
+        [
+            "id": "int",
+            "Row": "int",
+            "Col": "int",
+            "Temp": "int",
+            "surface": "int"
+        ]
+    ]
+    
+
+    
+}
+```
+
+
 ## Commands
 ### To Server
 - Deploy: {"type": "DEPLOY",\n "id": "{roverId}"}
@@ -29,10 +62,11 @@
 - Toggle autopilot {"type": "SWITCH_AUTOPILOT",\n "id": "{roverId}",\n "autopilot": {boolean}"}
 
 ### To Client
-- answer: {"type": "{command_type}",\n "id": "{roverId}",\n "success": "{boolean}",\n "scanResponse": "{"Coords": "[int, int]",\n "surface": {"String"},\n "temperature": {int}\n}",\n "position": "[int, int]",\n "direction": "{String}"}
+- answer: {"type": "{command_type}",\n "id": "{roverId}",\n "success": "{boolean}",\n "scanResponse": "{"Coords": "[int, int]",\n "surface": {"String"},\n "temperature": {int}\n}",\n "position": "[int, int]",\n "direction": "{String}", "crashed": "{boolean}"}
 
 ## TODOs Kevin
 - RoverServer Create
+- Manche Buttons disablen, wenn der Advanced Modus aus ist 
 - Verarbeitung der Antworten auf Bodenstationseite
 - GUI -> Map des Planetens einbauen
 - ggf. Datenbank aufsetzen
