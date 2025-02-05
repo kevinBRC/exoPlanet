@@ -6,6 +6,9 @@ import java.util.*;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import exoPlanet.exoPlanet.Direction;
+import exoPlanet.exoPlanet.Ground;
+import exoPlanet.exoPlanet.Planet;
 
 
 public class Bodenstation {
@@ -25,7 +28,6 @@ public class Bodenstation {
     private JPanel roverPanel;
     private JPanel roverContainer;
     private Map<Integer, JPanel> roverControlPanels = new HashMap<>();
-    private JPanel mapPanel;
 
 	class RoverManager extends Thread{
 		private PrintWriter writeInput;
@@ -64,7 +66,7 @@ public class Bodenstation {
 		
 		/*
 		 * @brief: Reads the messages from the rover server as a thread
-		 
+		 */
 		public void run() {
 		    try {
 		        String serverMessage;
@@ -113,8 +115,10 @@ public class Bodenstation {
 				this.roverAlive.put("rover", newRover);								// put the newest values into the JSONObject
 				this.roverAlive.put("amountOfRover", newAmount);
 				
-				String message = "{'type': 'CREATE',\n 'id':'" + newId +"'}";		
-				boolean success = sendToServer(message);
+				JSONObject message = new JSONObject();
+				message.put("type", "CREATE");
+				message.put("id", newId);
+				boolean success = sendToServer(message.toString());
 				
 				if(success)
 				{
@@ -159,8 +163,11 @@ public class Bodenstation {
 			
 			this.roverAlive.getJSONArray("alreadyDeployed").put(id);				// add the id to the deployed ids
 			
-			String message = "{'type': 'DEPLOY',\n 'id:'" + id + "'}";			
-			return sendToServer(message);
+			JSONObject message = new JSONObject();
+			message.put("type", "DEPLOY");
+			message.put("id", id);
+		
+			return sendToServer(message.toString());
 		}
 		
 		// TODO check if message received Server
@@ -172,7 +179,7 @@ public class Bodenstation {
 		{
 			//this.writeInput.print(message);
 			//this.writeInput.flush();			
-			//turn true;
+			//return true;
 			System.out.println("Sending message: "+ message);
 			return true;
 		}
@@ -207,8 +214,10 @@ public class Bodenstation {
 			int newAmount = (this.roverAlive.getInt("amountOfRover") - 1);
 			this.roverAlive.put("amountOfRover", newAmount);
 			
-			String message = "{'type': 'EXIT',\n 'id':'" + id + "'}";
-			boolean success = sendToServer(message);
+			JSONObject message = new JSONObject();
+			message.put("id", id);
+			message.put("type", "EXIT");
+			boolean success = sendToServer(message.toString());
             
             if(success) 
             {
@@ -232,18 +241,21 @@ public class Bodenstation {
 			if(!checkIfRoverAlive(id))
 				return false;
 			
-			String message;
+			JSONObject message = new JSONObject();
 			
+			message.put("id", id);
+			message.put("direction", direction.toUpperCase());
 			if (scanAfterwards) 
 			{				
-				message = "{'type': 'SCAN_MOVE',\n 'id':'" + id + ",\n 'direction':'" + direction.toUpperCase() + "'}";
+				message.put("type", "SCAN_MOVE");
+
 			}
 			else
 			{
-				message = "{'type': 'MOVE',\n 'id':'" + id + ",\n 'direction':'" + direction.toUpperCase() + "'}";
+				message.put("type", "SCAN");
 			}
 			
-			return sendToServer(message);
+			return sendToServer(message.toString());
 		}
 		
 		/*
@@ -272,10 +284,14 @@ public class Bodenstation {
 		{
 			if(!checkIfRoverAlive(id))
 				return false;
+			JSONObject message = new JSONObject();
+			int[] coords = {x, y};
 			
-			String message = "{'type': 'LAND',\n 'id':'" + id + "',\n 'x':'" + x + "',\n 'y': '" + y + "'}";
+			message.put("type", "LAND");
+			message.put("id", id);
+			message.put("Coords", coords);
 			
-			return sendToServer(message);
+			return sendToServer(message.toString());
 		}
 		
 		/*
@@ -287,9 +303,13 @@ public class Bodenstation {
 			if(!checkIfRoverAlive(id))
 				return false;
 			
+			JSONObject message = new JSONObject();
 			
-			String message = "{'type': 'ROTATE',\n 'id': '" + id + ",\n 'direction': '" + direction.toUpperCase() + "'}";
-			return sendToServer(message);
+			message.put("type", "LAND");
+			message.put("id", id);
+			message.put("direction", direction.toUpperCase());
+			
+			return sendToServer(message.toString());
 		}
 		
 		/*
@@ -301,8 +321,12 @@ public class Bodenstation {
 			if(!checkIfRoverAlive(id))
 				return false;
 			
-			String message = "{'type': 'GETPOS',\n 'id': '" + id + "'}";
-			return sendToServer(message);
+			JSONObject message = new JSONObject();
+			
+			message.put("type", "GETPOS");
+			message.put("id", id);
+
+			return sendToServer(message.toString());
 			// The answer will be read by the run method and handled by the handleNotification method
 		}
 		
@@ -315,9 +339,12 @@ public class Bodenstation {
 			if(!checkIfRoverAlive(id))
 				return false;
 			
-			String message = "{'type': 'CHARGE',\n 'id': '" + id + "'}";
+			JSONObject message = new JSONObject();
 			
-			return sendToServer(message);
+			message.put("type", "CHARGE");
+			message.put("id", id);
+
+			return sendToServer(message.toString());
 			
 		}
 		
@@ -330,26 +357,47 @@ public class Bodenstation {
 			if(!checkIfRoverAlive(id))
 				return false;
 			
-			String message = "{'type': 'CHARGE',\n 'id': '" + id + "'}";
+			JSONObject message = new JSONObject();
 			
-			return sendToServer(message);
+			message.put("type", "GET_CHARGE");
+			message.put("id", id);
+
+			return sendToServer(message.toString());
 			// The answer will be read by the run method and handled by the handleNotification 
 		}
 		
+		/*
+		 * @brief: Sends a get charge command
+		 * @retVal: boolean whether the get charge was successful
+		 */
+		public boolean setAutopliot (int id, boolean autopilot)
+		{
+			if(!checkIfRoverAlive(id))
+				return false;
+			
+			JSONObject message = new JSONObject();
+			
+			message.put("type", "SWITCH_AUTOPILOT");
+			message.put("id", id);
+			message.put("autopilot", autopilot);
+
+			return sendToServer(message.toString());
+			// The answer will be read by the run method and handled by the handleNotification 
+		}
 		
 		
 			
 	
 	}
 	// TODO: parameters for DatabaseManager
-	public Bodenstation(String serverAddress, int port, String databaseAddress)
+	public Bodenstation(String serverAddress, int port, String databaseAddress, String username, String password)
 	{
 		this.reader = new BufferedReader(new InputStreamReader(System.in));
 		this.serverAddress = serverAddress;
 		this.port = port;
 		this.databaseAddress = databaseAddress;
 		this.hasNotification = false;
-		this.dm = new DatabaseManager(databaseAddress);
+		this.dm = new DatabaseManager(databaseAddress, username, password);
 		this.rm = new RoverManager();
 		this.buffer = new ArrayDeque<>();
 		this.notifications = new JSONArray();
@@ -373,7 +421,6 @@ public class Bodenstation {
 
         // Erstelle die Panels für jeden Tab
         mainmenuPanel = new JPanel();
-        mapPanel = new JPanel();
         roverPanel = new JPanel();
         roverContainer = new JPanel();
         roverContainer.setLayout(new BoxLayout(roverContainer, BoxLayout.Y_AXIS));
@@ -413,7 +460,6 @@ public class Bodenstation {
         // Füge die Panels als Tabs hinzu
         tabbedPane.addTab("Mainmenu", mainmenuPanel);
         tabbedPane.addTab("Rover", roverPanel);
-        tabbedPane.addTab("Map", mapPanel);
         
         // Füge das TabbedPane zum Frame hinzu
         frame.add(tabbedPane, BorderLayout.CENTER);
@@ -454,7 +500,7 @@ public class Bodenstation {
                 }
             });
             
-            JButton btnMoveScan = new JButton("Move and Scan");
+            JButton btnMoveScan = new JButton("Scan and Move");
             btnMove.addActionListener(e -> {
             	String[] options = {"Left", "Right", "Up", "Down"};
             	String direction = (String) JOptionPane.showInputDialog(
@@ -478,38 +524,42 @@ public class Bodenstation {
 
             JButton btnLand = new JButton("Land");
             btnLand.addActionListener(e -> {
-            	// Erstellen Sie ein Panel mit zwei Labels und zwei Textfeldern
-                JPanel panelCoord = new JPanel(new GridLayout(2, 2, 5, 5));
-                
+                // Erstellen Sie ein Panel mit GridLayout für eine geordnete Darstellung
+                JPanel panelCoord = new JPanel(new GridLayout(3, 2, 5, 5));
+
+                // X-Koordinate
                 JLabel lblX = new JLabel("X-Coordinate:");
                 JTextField txtX = new JTextField();
-                
+
+                // Y-Koordinate
                 JLabel lblY = new JLabel("Y-Coordinate:");
                 JTextField txtY = new JTextField();
-                
+
+
+                // Komponenten dem Panel hinzufügen
                 panelCoord.add(lblX);
                 panelCoord.add(txtX);
                 panelCoord.add(lblY);
                 panelCoord.add(txtY);
-                
                 // Zeigen Sie das Dialogfenster an
                 int result = JOptionPane.showConfirmDialog(
-                    frame, 
-                    panelCoord, 
-                    "Enter Coordinates", 
-                    JOptionPane.OK_CANCEL_OPTION, 
+                    frame,
+                    panelCoord,
+                    "Enter Coordinates and Choose a Planet",
+                    JOptionPane.OK_CANCEL_OPTION,
                     JOptionPane.PLAIN_MESSAGE
                 );
-                
+
                 if (result == JOptionPane.OK_OPTION) {
                     try {
-                        // Versuchen Sie, die eingegebenen Werte als Ganzzahlen zu parsen
+                        // Koordinaten parsen
                         int x = Integer.parseInt(txtX.getText().trim());
                         int y = Integer.parseInt(txtY.getText().trim());
-                        
+
+
                         // Erstellen Sie den JSON-Befehl
                         JSONArray cmd = new JSONArray();
-                        cmd.put("land"); // Beispielbefehl, passen Sie ihn nach Bedarf an
+                        cmd.put("land");
                         cmd.put(roverId);
                         cmd.put(x);
                         cmd.put(y);
@@ -517,11 +567,11 @@ public class Bodenstation {
                         // Führen Sie den Befehl aus
                         handleUserInput(cmd);
                     } catch (NumberFormatException ex) {
-                        // Zeigen Sie eine Fehlermeldung, wenn die Eingabe keine gültigen Zahlen sind
+                        // Fehlermeldung, falls ungültige Eingaben vorliegen
                         JOptionPane.showMessageDialog(
-                            frame, 
-                            "Please enter valid integers for both coordinates.", 
-                            "Invalid Input", 
+                            frame,
+                            "Please enter valid integers for both coordinates.",
+                            "Invalid Input",
                             JOptionPane.ERROR_MESSAGE
                         );
                     }
@@ -581,6 +631,27 @@ public class Bodenstation {
                 cmd.put(roverId);
                 handleUserInput(cmd);
             });
+            
+            JButton btnAutopilot = new JButton("Autopilot");
+            btnAutopilot.addActionListener(e -> {
+            	String[] options = {"On", "Off"};
+            	String mode = (String) JOptionPane.showInputDialog(
+                        frame,
+                        "Turn Autopilot:",
+                        "Turn Autopilot",
+                        JOptionPane.PLAIN_MESSAGE,
+                        null,
+                        options,
+                        "Off");
+                
+                if (mode != null) {
+                    JSONArray cmd = new JSONArray();
+                    cmd.put("autopilot");
+                    cmd.put(roverId);
+                    cmd.put(mode);
+                    handleUserInput(cmd);
+                }
+            });
 
             // Füge die Buttons dem Panel hinzu
             panel.add(btnMove);
@@ -591,6 +662,7 @@ public class Bodenstation {
             panel.add(btnGetPos);
             panel.add(btnCharge);
             panel.add(btnGetCharge);
+            panel.add(btnAutopilot);
 
             // Füge das Rover-Panel dem Rover-Container hinzu
             roverContainer.add(panel);
@@ -627,6 +699,8 @@ public class Bodenstation {
 		int digit = -1;
 		String appendix = "";
 		int[] coords = new int[]{-1, -1};
+		boolean autopilot = false;
+		
 		if(input.length() == 1)
 		{
 			command = input.getString(0);
@@ -648,6 +722,7 @@ public class Bodenstation {
 			digit = input.getInt(1);
 			coords = new int[]{input.getInt(2), input.getInt(3)};
 		}
+
 		
 		try 
 		{
@@ -675,6 +750,8 @@ public class Bodenstation {
 						throw new IllegalArgumentException("No appendix was passed");
 					this.rm.move(digit, false, appendix);
 					break;
+					
+				// TODO add planet to land on
 				case "land":
 				case "LAND":
 					if(digit < 0)
@@ -737,6 +814,24 @@ public class Bodenstation {
 						throw new IllegalArgumentException("No digit was passed");
 					this.rm.getCharge(digit);
 					break;
+					
+				case "autopilot":
+				case "AUTOPILOT":
+					if(digit < 0)
+						throw new IllegalArgumentException("No digit was passed");
+					if (appendix.equals(""))
+						throw new IllegalArgumentException("No appendix was passed");
+					
+					if (appendix.equals("On"))
+					{
+						autopilot = true;
+					}
+					else
+					{
+						autopilot = false;
+					}
+					this.rm.setAutopliot(digit, autopilot);
+					break;
 				default:
 					System.err.println("Invalid Command: "+ input);
 					break;
@@ -759,7 +854,6 @@ public class Bodenstation {
 	 */
 	private void handleNotification()
 	{
-
 	}
 
 	/*
@@ -813,18 +907,40 @@ public class Bodenstation {
 	 */
 	private void updateBuffer()
 	{
-		this.buffer.poll();
+		JSONObject entry = this.buffer.poll();
+		String type = entry.getString("type");
+		switch (type) 
+		{
+			case "DEPLOY":
+				boolean success = entry.getBoolean("success");
+				if (success)
+				{
+					
+				}
+				
+			case "CREATE":
+			case "MOVE":
+			case "LAND":
+			case "SCAN":
+			case "MOVE_SCAN":
+			case "ROTATE":
+			case "EXIT":
+			case "GETPOS":
+			case "CHARGE":
+			case "GET_CHARGE":
+			case "SWITCH_AUTOPILOT":
+			default:
+				System.err.println("Invalid answer: "+ type);
+				break;
+		}
+
 	}
-	
-
-	
-
-	
 
 	
 	public static void main(String[] args) {
-		Bodenstation bs = new Bodenstation(null, 0, null);
+		Bodenstation bs = new Bodenstation(null, 0, null, null, null);
 		bs.initializeGUI();
+		//bs.updateBuffer();
 		
 	}
 
