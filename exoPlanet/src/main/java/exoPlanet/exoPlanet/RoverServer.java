@@ -5,10 +5,18 @@ import org.json.*;
 import java.net.*;
 import java.util.Queue;
 
+
+
 public class RoverServer {
 	private Queue<JSONObject> sharedBuffer;
 	private PrintWriter out;
 	private ConnectionListener cl;
+	private Rover roverOne = null;
+	private Rover roverTwo = null;
+	private Rover roverThree = null;
+	private Rover roverFour = null;
+	private Rover roverFive = null;
+	private JSONArray roverEntries;
 	
 	// This class reads the input of the client and saves it into the buffer so the main thread isn't needed for reading
 	public class ConnectionListener extends Thread{
@@ -48,13 +56,20 @@ public class RoverServer {
 			this.out = new PrintWriter(client.getOutputStream(), true);
 			this.cl = new ConnectionListener(client);
 			this.cl.start();
+			this.roverEntries.put(this.roverOne);
+			this.roverEntries.put(this.roverTwo);
+			this.roverEntries.put(this.roverThree);
+			this.roverEntries.put(this.roverFour);
+			this.roverEntries.put(this.roverFive);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
 	public void handleClientMessage() {
-		JSONObject entry = null;
+		boolean success;
+		JSONObject entry = new JSONObject();
+		JSONObject answer = new JSONObject();
 		
 		while(entry == null) 
 		{
@@ -64,6 +79,11 @@ public class RoverServer {
 		switch(entry.getString("type"))
 		{
 			case "DEPLOY":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "DEPLOY");
+				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "MOVE":
 				break;
@@ -76,6 +96,11 @@ public class RoverServer {
 			case "ROTATE":
 				break;
 			case "EXIT":
+				success = exitRover(entry.getInt("id"));
+				answer.put("type", "EXIT");
+				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "GETPOS":
 				break;
@@ -94,6 +119,36 @@ public class RoverServer {
 		this.out.print(message.toString());
 	}
 	
+	// For easier handling -> detect if one rover is unused (null)
+	public boolean deployRover(int id){
+		for(int i = 0; i < this.roverEntries.length(); i++)
+		{
+			if(this.roverEntries.get(i) == null)
+			{
+				Rover rover = new Rover(id);
+				this.roverEntries.put(i, rover);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public boolean exitRover(int id)
+	{
+		for(int i = 0; i < this.roverEntries.length(); i++)
+		{
+			if (this.roverEntries.get(i) != null)
+			{
+				if (this.roverEntries.getInt(i) == id)
+				{
+					this.roverEntries.put(i, JSONObject.NULL);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
 	
     public static void main(String[] args) {
         int port = 12345;  // Port, auf dem der Server horcht
@@ -101,22 +156,23 @@ public class RoverServer {
         // Erstellen des Serversockets innerhalb eines try-with-resources-Blocks
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Server gestartet. Warte auf Verbindungen...");
-
-            // Endlosschleife, um immer wieder auf neue Verbindungen zu warten
-            while (true) {
-                // Warten auf eine eingehende Client-Verbindung
-                try (Socket client = serverSocket.accept()) {
-                    System.out.println("Client verbunden: " + client.getInetAddress());
-                    RoverServer rs = new RoverServer(client);
-                    
-                    
-                    
-                    System.out.println("Client-Verbindung geschlossen.");
-                } catch (IOException e) {
-                    System.err.println("Fehler bei der Bearbeitung der Client-Verbindung: " + e.getMessage());
-                }
+            try (Socket client = serverSocket.accept()) 
+            {
+	            // Endlosschleife, um immer wieder auf neue Verbindungen zu warten
+	            while (true)
+	            {
+	                // Warten auf eine eingehende Client-Verbindung,
+	                    System.out.println("Client verbunden: " + client.getInetAddress());
+	                    RoverServer rs = new RoverServer(client);
+	                    rs.handleClientMessage();
+	            }
+	            
+            } catch (IOException e) 
+            {
+            	System.err.println("Fehler bei der Bearbeitung der Client-Verbindung: " + e.getMessage());
             }
-        } catch (IOException e) {
+        } catch (IOException e) 
+        {
             System.err.println("Fehler beim Erstellen des Serversockets: " + e.getMessage());
         }
     }

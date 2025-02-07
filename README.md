@@ -66,7 +66,7 @@
 
 ## TODOs Kevin
 - RoverServer Create
-- Manche Buttons disablen, wenn der Advanced Modus aus ist 
+X Manche Buttons disablen, wenn der Advanced Modus aus ist 
 - Verarbeitung der Antworten auf Bodenstationseite
-- GUI -> Map des Planetens einbauen
-- ggf. Datenbank aufsetzen
+
+

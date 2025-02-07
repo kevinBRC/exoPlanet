@@ -1,17 +1,33 @@
 package exoPlanet.exoPlanet;
-import java.io.*;
-import org.json.*;
-import java.net.*;
-import java.time.LocalDate;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.*;
-import javax.swing.*;
+import java.util.ArrayDeque;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Queue;
+
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
+import javax.swing.JToggleButton;
+import javax.swing.SwingUtilities;
 import javax.swing.border.TitledBorder;
-import java.awt.*;
-import exoPlanet.exoPlanet.Direction;
-import exoPlanet.exoPlanet.Ground;
-import exoPlanet.exoPlanet.Planet;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 
 public class Bodenstation {
@@ -25,6 +41,7 @@ public class Bodenstation {
 	private JSONArray notifications;
 	private BufferedReader reader;
 	private JSONObject allRoverInformation;
+	private boolean advancedModeOn;
 	
 	private JFrame frame;
     private JTabbedPane tabbedPane;
@@ -400,8 +417,8 @@ public class Bodenstation {
 		this.rm = new RoverManager();
 		this.buffer = new ArrayDeque<>();
 		this.notifications = new JSONArray();
+		this.advancedModeOn = false;
 		//this.rm.start();
-	
 	}
 	
 	 /*
@@ -452,8 +469,14 @@ public class Bodenstation {
         	}
         });
        
+		JToggleButton advancedModeButton = new JToggleButton("Turn On Advanced Mode");
+		advancedModeButton.addActionListener(e ->{
+            this.advancedModeOn = advancedModeButton.isSelected();
+		});
+
         mainmenuPanel.add(btnConnect);
         mainmenuPanel.add(btnCreatRover);
+        mainmenuPanel.add(advancedModeButton);
         
         // Füge die Panels als Tabs hinzu
         tabbedPane.addTab("Mainmenu", mainmenuPanel);
@@ -633,10 +656,13 @@ public class Bodenstation {
             panel.add(btnLand);
             panel.add(btnRotate);
             panel.add(btnExit);
-            panel.add(btnGetPos);
-            panel.add(btnCharge);
-            panel.add(btnGetCharge);
-            panel.add(btnAutopilot);
+			if (this.advancedModeOn)
+			{
+				panel.add(btnGetPos);
+				panel.add(btnCharge);
+				panel.add(btnGetCharge);
+				panel.add(btnAutopilot);
+			}
 
             // Füge das Rover-Panel dem Rover-Container hinzu
             roverContainer.add(panel);
@@ -845,7 +871,6 @@ public class Bodenstation {
                 
                 if (input.contains("_"))
                 {
-                	
                 		JSONArray commandArray = new JSONArray();
                     	String[] splitInput = input.split("_");
             			String command = splitInput[0];
@@ -853,7 +878,6 @@ public class Bodenstation {
                     	commandArray.put(command);
                     	commandArray.put(digit);
                     	handleUserInput(commandArray);
-                	
                 }
                 else
                 {
@@ -876,7 +900,11 @@ public class Bodenstation {
 	 */
 	private void updateBuffer()
 	{
-		JSONObject entry = this.buffer.poll();
+		JSONObject entry = new JSONObject();
+		while (entry == null)
+		{
+			entry = this.buffer.poll();			
+		}
 		String type = entry.getString("type");
 		boolean success = entry.getBoolean("success");
 		switch (type) 
