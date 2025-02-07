@@ -5,9 +5,8 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.Socket;
 import java.util.Random;
-import org.json.*;
 
-public class Rover
+public class rover
 {
 	public int id;
 	public int[] position = new int[2];
@@ -18,7 +17,7 @@ public class Rover
 	public BufferedReader input = new BufferedReader(new InputStreamReader(Exo));
 	private RoverServer roverManager;
 		
-	public Rover(int id)
+	public rover(int id)
 	{
 		Random RANDOM = new Random();
 		direction = direction[RANDOM.nextInt(Directons.length)];
