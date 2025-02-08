@@ -16,6 +16,7 @@ public class rover
 	public PrintWriter output = new PrintWriter(new Writer(Exo));
 	public BufferedReader input = new BufferedReader(new InputStreamReader(Exo));
 	private RoverServer roverManager;
+	private int charge;
 		
 	public rover(int id)
 	{
@@ -31,13 +32,16 @@ public class rover
 		throws Exception not implemented;
 	}
 	
-	public void ExecuteCommand (JSONObject command) // befehl ist string
+	
+	
+	private void ExecuteCommand (JSONObject command) // befehl ist string
 	{
 		String action = command.optString("type").toLowerCase();
 		switch (action)
 		{
 			case "deploy":
 				output.Exo("orbit");
+				//will send {"type":"response"\n, "success":"bool"}
 				break;
 				
 			case "land":
@@ -45,6 +49,7 @@ public class rover
 				Random RANDOM = new Random();
 				direction = direction[RANDOM.nextInt(Directons.length)];
 				output.Exo("land:POSITION|" + position[0] + "|" + position[1] + "|" + direction);
+				//will send {"type":"response"\n, "success":"bool"}
 				break;
 				
 			case "rotate":
@@ -58,11 +63,13 @@ public class rover
 					direction = direction[(direction.ordinal() + DIRECTIONS.length - 1) % DIRECTIONS.length];
 				}
 				output.Exo("rotate:" + rotation);
+				//will send {"type":"response"\n, "success":"bool"}
 				break;
 				
 			case "move":
 				output.Exo("move");
 				ErrorHandler(input.Exo());
+				//will send {"type":"response"\n, "success":"bool"\n, "text":"string_if_something_happened"}
 				break;
 				
 			case "scan":
@@ -70,24 +77,57 @@ public class rover
 				SaveToBuffer(input.Exo());
 				int[] scannedPos = CalcPosition(direction);
 				SurfaceProperty.SurfaceProperty(internalBuffer.optString("Ground"), scannedPos[0], scannedPos[1], internalBuffer.optString("temp"))
+				//will send {"type":"scan"\n, "id": "{roverId}",\n "success": "{boolean}",\n "scanResponse": "{"Coords": "[int, int]",\n "surface": {"String"},\n "temperature": {int}\n}",\n "position": "[int, int]",\n "direction": "{String}", "crashed": "{boolean}"}
 				break;
 				
 			case "move-and-scan":
 			
 				output.Exo("mvscan");
 				ErrorHandler(input.Exo());
+				//will send {"type":"scan"\n, "id": "{roverId}",\n "success": "{boolean}",\n "scanResponse": "{"Coords": "[int, int]",\n "surface": {"String"},\n "temperature": {int}\n}",\n "position": "[int, int]",\n "direction": "{String}", "crashed": "{boolean}"}
 				break;
 				
 			case "exit":
 				output.Exo("exit");
 				UpdateState(9);
+				//will send {"type":"response"\n, "success":"bool}
 				break;
 				
 			case "enable-auto":
 				UpdateState(2);
+				//will send {"type":"response"\n, "success":"bool"}
+				// and continue with scans
+				//finally {"type":"response"\n,"status":"RoverState(mostly idle,crashed,decommissioned)"}
 				break;
 				
+			case "getpos":
+				// will send {"type":"response"\n, "pos":"[int,int]"}
+				break;
+				
+			case "charge":
+				//will send {"type":"response"\n, "success": "bool"}
+				break;
+				
+			case "get_charge":
+				//will send {"type":"response"\n, "charge": "{charge as int}"}
+				break;
+				
+		}
 	}
+		
+	private void SendCommand(JSONObject json)
+	{
+		output.println(json.toString());	
+	}
+	
+	private void Move()
+		{
+			StringBuilder jsontranslator = new StringBuilder();
+			output.Exo("move");
+			ErrorHandler(input.Exo());
+			// wait for incomming message
+			string response = await command.optString("CMD").toLowerCase();
+		}
 	
 	private int[] CalcPosition (direction)
 	{
@@ -235,8 +275,5 @@ public class rover
 		        throw new IllegalArgumentException("Ungültige ID für RoverState: " + id); 
 		    }
 		}
-}
-
-public class SurfaceProperty
-{    
+}   
 	
