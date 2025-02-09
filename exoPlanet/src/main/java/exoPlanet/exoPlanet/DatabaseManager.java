@@ -27,8 +27,8 @@ public class DatabaseManager {
 	    return DriverManager.getConnection(url, username, password);
 	}
 	
-	public static void insertRover(int roverId, String name, int planet, int last_activity, int clientId, int ground, int direction, int xCoord, int yCoord, LocalDateTime timestamp, String textprotocoll) {
-		String sql = "INSERT INTO robot (r_id, Name, p_id, lastActivity, clientid, g_id, d_id, posx, posy, dateandtime, textprotocoll) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	public static void insertRover(int roverId, String name, int planet, int last_activity, int clientId, int ground, int direction, int xCoord, int yCoord, LocalDateTime timestamp, String textprotocoll, int energy, int temp) {
+		String sql = "INSERT INTO robot (r_id, Name, p_id, lastActivity, clientid, g_id, d_id, posx, posy, dateandtime, textprotocoll, energy, temp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	    try (Connection conn = getConnection();
 	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -44,6 +44,8 @@ public class DatabaseManager {
 	        pstmt.setInt(9, yCoord);
 	        pstmt.setTimestamp(10, Timestamp.valueOf(timestamp));
 	        pstmt.setString(11, textprotocoll);	
+	        pstmt.setInt(12, energy);
+	        pstmt.setInt(13, temp);
 	        
 	        int rowsInserted = pstmt.executeUpdate();
 
@@ -64,6 +66,23 @@ public class DatabaseManager {
 	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
 	        pstmt.setString(1, name);
+	        pstmt.setInt(2, id);
+	        
+	        int affectedRows = pstmt.executeUpdate();
+	        System.out.println(affectedRows + " row(s) inserted.");
+
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	}
+
+	public static void updateRoverCharge(int charge, int id) {
+		String sql = "UPDATE robot SET charge = ? WHERE r_id = ?";
+
+	    try (Connection conn = getConnection();
+	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+	        pstmt.setInt(1, charge);
 	        pstmt.setInt(2, id);
 	        
 	        int affectedRows = pstmt.executeUpdate();
@@ -405,6 +424,28 @@ public class DatabaseManager {
 		}
 		
 		return maxId; // Gibt den höchsten Wert zurück (oder -1, falls kein Wert vorhanden)
+	}
+
+	public static void insertGroundPosMapping(int m_id, int p_id, int g_id, int posx, int posy, int temp)
+	{
+		String sql = "INSERT INTO GroundPosMapping (m_id, p_id, g_id, posx, posy, temp) VALUES (?, ?, ?, ?, ?, ?)";
+
+	    try (Connection conn = getConnection();
+	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+	        pstmt.setInt(1, m_id);
+	        pstmt.setInt(2, p_id);
+	        pstmt.setInt(3, g_id);
+	        pstmt.setInt(4, posx);
+	        pstmt.setInt(5, posy);
+	        pstmt.setInt(6, temp);
+
+	        int affectedRows = pstmt.executeUpdate();
+	        System.out.println(affectedRows + " row(s) inserted.");
+
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
 	}
 	  
 }
