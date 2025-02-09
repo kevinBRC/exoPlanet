@@ -33,9 +33,8 @@
 - Toggle autopilot {"type": "SWITCH_AUTOPILOT",\n "id": "{roverId}",\n "autopilot": {boolean}"}
 
 ### To Client
-- answer: {"type": "{command_type}",\n "id": "{roverId}",\n "success": "{boolean}",\n "scanResponse": "{"Coords": "[int, int]",\n "surface": {"String"},\n "temperature": {int}\n}",\n "position": "[int, int]",\n "direction": "{int}", "crashed": "{boolean}"}
-- deploy: {"type": "DEPLOY",\n "id": "{roverId}"}
-- Land: {"type": "LAND",\n "id": "{roverId},\n "Coords": "[int, int]",\n "direction": {int},\n "success": "{boolean}, "crashed": "{boolean}"}
+- deploy: {"type": "DEPLOY",\n "id": "{roverId}"\n, planet:{string}}
+- Land: {"type": "LAND",\n "id": "{roverId},\n "Coords": "[int, int]",\n "direction": {int},\n "success": "{boolean}, "crashed": "{boolean}", "surface": {string}}
 - Scan: {"type": "SCAN",\n "id": "{roverId}", "scanResponse": "{"Coords": "[int, int]",\n "surface": {"String"},\n "temperature": {int}\n}"}
 - Move and Scan: {"type": "SCAN",\n "id": "{roverId}", "scanResponse": "{"Coords": "[int, int]",\n "surface": {"String"},\n "temperature": {int}\n}", "success": "{boolean}, "position": "[int, int]", "crashed": "{boolean}"}
 - rotate: {"type": "ROTATE"\n , "id": "{roverId}",\n "rotation": "{direction}"}
@@ -47,8 +46,8 @@
 - Error: {"type": "ERROR", "id": "{roverId}", "crashed": {boolean}, "position": "[int, int]", errorMessage: "{string}"}
 
 ## TODOs Kevin
-- RoverServer Create
 X Manche Buttons disablen, wenn der Advanced Modus aus ist 
 - Verarbeitung der Antworten auf Bodenstationseite -> SQL Befehle ausbessern -> spaltennamen
+- Direction/Ground/planet -> converts mit Sarah absprechen (gleiche indexwerte)
 
 
