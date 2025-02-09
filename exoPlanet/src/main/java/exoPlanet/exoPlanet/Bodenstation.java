@@ -650,7 +650,7 @@ public class Bodenstation {
                 }
             });
 
-            // Füge die Buttons dem Panel hinzu
+            // Füge die Buttons dem Panel  
             panel.add(btnMove);
             panel.add(btnMoveScan);
             panel.add(btnLand);
@@ -907,43 +907,63 @@ public class Bodenstation {
 		}
 		String type = entry.getString("type");
 		boolean success = entry.getBoolean("success");
+
+		int highestA_id = this.getNewHighestPrimaryKey("a_id", "lastActivity");
+		this.dm.insertLastActivity(highestA_id, type, success);
+
+		int highestS_id = this.getNewHighestPrimaryKey("s_id", "statusHistory");
 		switch (type) 
 		{
 			case "DEPLOY":
-				
-				if (success)
-				{
-					this.dm.insertRover(entry.getInt("id"), "rover", entry.getInt("planet"), LocalDateTime.now(), "deploy", 1, entry.getInt("surface"), entry.getInt("direction"), entry.getJSONArray("position").getInt(0), entry.getJSONArray("position").getInt(1), LocalDateTime.now(), "rover deployed");
-					this.dm.insertLastActivity("Deploy", success);
-				}
-				else
-				{
-					this.dm.insertLastActivity("Deploy", success);
-				}
-				
+				this.dm.insertRover(entry.getInt("id"), "rover", entry.getInt("planet"), highestA_id, 1, entry.getInt("surface"), entry.getInt("direction"), entry.getJSONArray("position").getInt(0), entry.getJSONArray("position").getInt(1), LocalDateTime.now(), "rover deployed");
+				this.dm.insertStatusHistory(highestS_id, entry.getInt("id"), highestA_id, "", entry.getBoolean("success"), "", "");
+				break;
+
 			case "MOVE":
-				if (success)
-				{
-					this.dm.insertLastActivity("Move", success);
-					this.dm.insertRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
-				}
-				else
-				{
-					this.dm.insertLastActivity("Move", success);
-					if (entry.getBoolean("crashed"))
-					{
-						this.dm.insertStatusHistory(entry.getInt("id"), 1, 1, true, "crashed");
-					}
-				}
 			case "LAND":
+				this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
+				this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
+				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+				if (entry.getBoolean("crashed"))
+				{
+					this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), true);
+				}
+				break;
+
+
 			case "SCAN":
 			case "MOVE_SCAN":
 			case "ROTATE":
+				this.dm.updateRoverDirection(entry.getInt("direction"), entry.getInt("id"));
+				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+				break;
+
 			case "EXIT":
+				this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), true);								// Exit = crashed
+				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+				break;
+
 			case "GETPOS":
+				this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
+				this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
+				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+				break;
+
 			case "CHARGE":
+				break;
 			case "GET_CHARGE":
+				break;
 			case "SWITCH_AUTOPILOT":
+				break;
+			case "ERROR":
+				this.dm.updateStatusHistoryLastError(entry.getInt("id"), entry.getString("errorMessage"));
+				this.dm.updateStatusHistoryErrorProtocoll(entry.getInt("id"), entry.getString("errorMessage"));
+				this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), entry.getBoolean("crashed"));
+				this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
+				this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
+				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+				break;
+				
 			default:
 				System.err.println("Invalid answer: "+ type);
 				break;
@@ -951,11 +971,25 @@ public class Bodenstation {
 
 	}
 
+	public int getNewHighestPrimaryKey(String table, String searchedKey) throws IllegalArgumentException 
+	{
+		int highestKey = this.dm.getHighestPrimaryKey(table, searchedKey);
+		
+		if(highestKey > 0)
+		{
+			return highestKey + 1;
+		}
+
+		else
+		{
+			throw new IllegalArgumentException("No highest Primary Key was found");
+		}
+	}
+
 	
 	public static void main(String[] args) {
-		Bodenstation bs = new Bodenstation(null, 0, null, null, null);
-		bs.initializeGUI();
-		//bs.updateBuffer();
+		Bodenstation bs = new Bodenstation("", 0, "localhost:3306", "root", "Kevin");
+		DatabaseManager dm = new DatabaseManager("jdbc:mysql://localhost:3306/exoplanet?useSSL=false&serverTimezone=UTC", "root", "Kevin");
 		
 	}
 
