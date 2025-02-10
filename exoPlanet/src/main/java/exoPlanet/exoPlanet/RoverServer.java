@@ -11,11 +11,11 @@ public class RoverServer {
 	private Queue<JSONObject> sharedBuffer;
 	private PrintWriter out;
 	private ConnectionListener cl;
-	private Rover roverOne = null;
-	private Rover roverTwo = null;
-	private Rover roverThree = null;
-	private Rover roverFour = null;
-	private Rover roverFive = null;
+	private Rover roverOne = JSONObject.NULL;
+	private Rover roverTwo = JSONObject.NULL;
+	private Rover roverThree = JSONObject.NULL;
+	private Rover roverFour = JSONObject.NULL;
+	private Rover roverFive = JSONObject.NULL;
 	private JSONArray roverEntries;
 	
 	// This class reads the input of the client and saves it into the buffer so the main thread isn't needed for reading
@@ -82,7 +82,6 @@ public class RoverServer {
 				success = deployRover(entry.getInt("id"));
 				answer.put("type", "DEPLOY");
 				answer.put("id", entry.getInt("id"));
-				answer.put("success", success);
 				sendToClient(answer);
 				break;
 			case "MOVE":
@@ -126,7 +125,6 @@ public class RoverServer {
 				success = exitRover(entry.getInt("id"));
 				answer.put("type", "EXIT");
 				answer.put("id", entry.getInt("id"));
-				answer.put("success", success);
 				sendToClient(answer);
 				break;
 			case "GETPOS":
@@ -194,7 +192,7 @@ public class RoverServer {
 	public boolean deployRover(int id){
 		for(int i = 0; i < this.roverEntries.length(); i++)
 		{
-			if(this.roverEntries.get(i) == null)
+			if(this.roverEntries.get(i) == JSONObject.NULL)
 			{
 				Rover rover = new Rover(id);
 				this.roverEntries.put(i, rover);
@@ -219,6 +217,8 @@ public class RoverServer {
 		}
 		return false;
 	}
+
+	public boolean moveRover
 	
 	
     public static void main(String[] args) {

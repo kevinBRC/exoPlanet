@@ -341,6 +341,16 @@ public class rover
 		throws Exception not implemented;
 	}
 	
+	public JSONObject GetInternalBuffer()
+	{
+		return internalBuffer;
+	}
+	
+	public int GetId();
+	{
+		return id;
+	}
+	
 	private void SaveToBuffer(JSONObject message)
 	{
 		internalBuffer = message;
