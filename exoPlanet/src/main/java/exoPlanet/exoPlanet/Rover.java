@@ -4,9 +4,13 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Random;
 
-public class rover
+import org.json.*;
+import exoPlanet.*;
+
+public class Rover
 {
 	public int id;
 	public int[] position = new int[2];
@@ -15,41 +19,43 @@ public class rover
 	private Socket Exo = new Socket();
 	private JSONObject CommandBuffer;
 	private boolean infoFlag = false;
-	public PrintWriter output = new PrintWriter(new Writer(Exo));
+	public PrintWriter output = new PrintWriter(Exo.getOutputStream());
 	public BufferedReader input = new BufferedReader(new InputStreamReader(Exo.getInputStream()));
 	private RoverServer roverManager;
 	private int charge;
 	
-	public boolean GetInfoFlag(); //RoverServer can read new info from Buffer, if this returns true
+	public boolean getInfoFlag() //RoverServer can read new info from Buffer, if this returns true
 	{
 		return infoFlag;
 	}
 	
-	public void SetInfoFlagTo0(); //if InternalBuffer is read by RoverServer, execute this method
+	public void SetInfoFlagTo0() //if InternalBuffer is read by RoverServer, execute this method
 	{
 		infoFlag = false;
 	}
 		
-	public rover(int id)
+	public Rover(int id)
 	{
 		Random RANDOM = new Random();
 		direction = direction[RANDOM.nextInt(Directons.length)];
-		id = this.id;
+		this.id = id;
+		this.internalBuffer = new JSONObject();
 	}
 	
 	
 	
-	public ConnectToExoplanet(string addressExoplanet, string portExoplanet)
+	public void ConnectToExoplanet(String addressExoplanet, String portExoplanet)
 	{
-		throws Exception not implemented;
+		//throws Exception not implemented;
 	}
 	
 	
 	
-	private void ExecuteCommand (JSONObject command) // befehl ist string
+	private void ExecuteCommand (String command) // befehl ist string
 	{
-		String action = command.optString("type").toLowerCase();
-		switch (action)
+		JSONObject action = new JSONObject(command);
+		String type = action.getString("type");
+		switch (type)
 		{
 			case "deploy":
 				output.Exo("orbit");
@@ -57,7 +63,7 @@ public class rover
 				break;
 				
 			case "land":
-				position = command.optString("Coords")
+				position = action.getInt("Coords");
 				Random RANDOM = new Random();
 				direction = direction[RANDOM.nextInt(Directons.length)];
 				output.Exo("land:POSITION|" + position[0] + "|" + position[1] + "|" + direction);
@@ -65,7 +71,7 @@ public class rover
 				break;
 				
 			case "rotate":
-				String rotation = command.optString("rotation");
+				String rotation = action.getString("rotation");
 				Rotate(rotation);
 				}
 
@@ -172,8 +178,8 @@ public class rover
 	            JSONObject measure = response.getJSONObject("MEASURE");
 	            Surfaces surface = Surfaces.valueOf(measure.getString("GROUND").toUpperCase());
 	            float temperature = (float) measure.getDouble("TEMP");
-	            int[] scanPos = CalcPosition;
-	            SurfaceProperty scannedProperty = new SurfaceProperty(surface, scanPos[0], scanPos[1], temperature);
+	            int[] scanPos = CalcPosition();
+	            SurfaceProperties scannedProperty = new SurfaceProperties(surface, scanPos[0], scanPos[1], temperature);
 	            StoreScanResult(scannedProperty);
 	        } 
 	    } 
@@ -183,7 +189,7 @@ public class rover
 	    } 
 	}
 	
-	private void StoreScanResult(SurfaceProperty property) 
+	private void StoreScanResult(SurfaceProperties property) 
 	{ 
 	    try 
 	    { 
@@ -196,7 +202,7 @@ public class rover
 	        scanResponse.put("temperature", property.getTemperature());
 
 	        json.put("scanResponse", scanResponse.toString());
-	        internalBuffer = json.toString();
+	        this.internalBuffer.put("", scanResponse);
 	    } 
 	    catch (Exception e) 
 	    { 
@@ -206,25 +212,25 @@ public class rover
 
 	private int[] CalcPosition ()
 	{
-		String dir = direction
+		String dir = direction;
 		int[] nextPos = new int[2];
 		switch (dir) 
 		{
                case "EAST":
-                   nextPos[0] = Position[0] + 1;
-				   nextPos[1] = Position[1];
+                   nextPos[0] = this.position[0] + 1;
+				   nextPos[1] = this.position[1];
                    break;
                case "SOUTH":
-					nextPos[1] = Position[1] + 1;
-				   nextPos[0] = Position[0];
+					nextPos[1] = this.position[1] + 1;
+				   nextPos[0] = this.position[0];
                    break;
                case "WEST":
-					nextPos[0] = Position[0] - 1;
-				   nextPos[1] = Position[1];
+					nextPos[0] = this.position[0] - 1;
+				   nextPos[1] = this.position[1];
                    break;
                case "NORTH":
-					nextPos[1] = Position[1] - 1;
-				   nextPos[0] = Position[0];
+					nextPos[1] = this.position[1] - 1;
+				   nextPos[0] = this.position[0];
                    break;
 		}
 		return nextPos;

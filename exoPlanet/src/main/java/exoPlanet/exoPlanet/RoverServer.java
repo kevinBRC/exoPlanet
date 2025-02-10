@@ -4,6 +4,7 @@ import java.io.*;
 import org.json.*;
 import java.net.*;
 import java.util.Queue;
+import exoPlanet.*;
 
 
 
@@ -166,7 +167,7 @@ public class RoverServer {
 		PrintWriter toBS = new PrintWriter(client.getOutputStream(), true);
 		while (true) 
 		   { 
-			if (infoFlag) 
+			if (roverInstace.getInfoFlag()) 
 		       {					
 				JSONObject roverAnswer = roverInstance.GetInternalBuffer();
 				roverAnswer.put("id", roverInstance.GetId());
