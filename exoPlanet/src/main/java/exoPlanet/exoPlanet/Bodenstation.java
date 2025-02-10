@@ -192,17 +192,14 @@ public class Bodenstation {
 			return sendToServer(message.toString());
 		}
 		
-		// TODO check if message received Server
 		/*
 		 * @brief: Sends a message to the rover server
 		 * @retVal: boolean whether the sending was successful
 		 */
 		public boolean sendToServer(String message) 
 		{
-			//this.writeInput.print(message);
-			//this.writeInput.flush();			
-			//return true;
-			System.out.println("Sending message: "+ message);
+			// this.writeInput.print(message);
+			// this.writeInput.flush();			
 			return true;
 		}
 		
@@ -420,7 +417,7 @@ public class Bodenstation {
 		this.notifications = new JSONArray();
 		this.advancedModeOn = false;
 		this.planet = -1;
-		//this.rm.start();
+		this.rm.start();
 	}
 	
 	 /*
@@ -730,8 +727,6 @@ public class Bodenstation {
 		{
 			switch (command) 
 			{
-				
-				
 				case "deploy":
 				case "DEPLOY":
 					if(digit < 0)
@@ -845,12 +840,14 @@ public class Bodenstation {
 		
 	}
 
-	// TODO programm this method
 	/*
 	 * @brief: Looks for new content within the buffer. If new content is detected it handles it
 	 */
-	private void handleNotification()
+	public void showError(String error)
 	{
+		SwingUtilities.invokeLater(() -> {
+	        JOptionPane.showMessageDialog(null, "Following error occurred: " + error, "Error", JOptionPane.ERROR_MESSAGE);
+	    });
 	}
 
 	/*
@@ -981,6 +978,7 @@ public class Bodenstation {
 				this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
 				this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
 				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+				this.showError(entry.getString("errorMessage"));
 				break;
 
 			default:
@@ -1082,7 +1080,7 @@ public class Bodenstation {
 	public static void main(String[] args) {
 		Bodenstation bs = new Bodenstation("", 0, "localhost:3306", "root", "Kevin");
 		DatabaseManager dm = new DatabaseManager("jdbc:mysql://localhost:3306/exoplanet?useSSL=false&serverTimezone=UTC", "root", "Kevin");
-		
+		bs.initializeGUI();
 		bs.updateBuffer();
 		
 	}
