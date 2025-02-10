@@ -12,8 +12,52 @@ import exoPlanet.*;
 
 public class Rover
 {
+	private enum Directions
+	{
+		EAST,
+		SOUTH,
+		WEST,
+		NORTH
+	}
+	
+	private enum RoverState
+	{
+	    NEW(0),
+	    IDLE(1),
+	    AUTO(2),
+	    BUSY(3),
+	    CRASHED(4),
+	    RECHARGING(5),
+	    DECOMMISSIONED(9);
+
+		private final int stateId;
+
+		RoverState(int stateId) 
+		{
+		    this.stateId = stateId;
+		}
+
+		public int getStateId() 
+		{
+		    return this.stateId;
+		}
+
+		public static RoverState GetState(int id) 
+		{
+		    for (RoverState rs : RoverState.values()) 
+		    {
+		    	if (rs.getStateId() == id) 
+		        {  
+		    		return rs;  
+		        }
+		    }
+		        throw new IllegalArgumentException("Ungültige ID für RoverState: " + id); 
+		}
+	}
+	
 	public int id;
-	public int[] position = new int[2];
+	public int xPosition;
+	public int yPosition;
 	public Directions direction;
 	public JSONObject internalBuffer;
 	private Socket Exo = new Socket();
@@ -29,9 +73,9 @@ public class Rover
 		return infoFlag;
 	}
 	
-	public void SetInfoFlagTo0() //if InternalBuffer is read by RoverServer, execute this method
+	public void setInfoFlag(boolean flag) //if InternalBuffer is read by RoverServer, execute this method
 	{
-		infoFlag = false;
+		this.infoFlag = flag;
 	}
 		
 	public Rover(int id)
@@ -55,26 +99,42 @@ public class Rover
 	{
 		JSONObject action = new JSONObject(command);
 		String type = action.getString("type");
+		JSONObject jToExo = new JSONObject();
 		switch (type)
 		{
 			case "deploy":
-				output.Exo("orbit");
+				jToExo.put("CMD", "orbit");
+				SendCommandToExo(jToExo);
+				this.internalBuffer = WaitForExoResponse();
+				setInfoFlag(true);
 				//will send {"type":"response"\n, "success":"bool"}
 				break;
 				
 			case "land":
-				position = action.getInt("Coords");
+				this.xPosition = action.getInt("xPosition");
+				this.yPosition = action.getInt("yPosition");
 				Random RANDOM = new Random();
-				direction = direction[RANDOM.nextInt(Directons.length)];
-				output.Exo("land:POSITION|" + position[0] + "|" + position[1] + "|" + direction);
+				this.direction = direction[RANDOM.nextInt(Directons.length)];
+				jToExo.put("CMD","land");
+				jToExo.put("POSITION", {this.xPosition},{this.yPosition},{this.direction})
+				SendCommandToExo(jToExo);
+				JSONObject response = WaitForExoResponse();
+				if(response.getString("CMD") == "landed")
+				{
+					StoreScanResults(SurfaceProperties(response.getString("GROUND"), this.xPosition, this.yPosition, response.getDouble("TEMP"));
+				}
+				else
+				{
+					this.internalBuffer = response;
+				}
+				setInfoFlag(true);
 				//will send {"type":"response"\n, "success":"bool"}
 				break;
 				
 			case "rotate":
 				String rotation = action.getString("rotation");
 				Rotate(rotation);
-				}
-
+				
 				//will send {"type":"response"\n, "success":"bool"}
 				break;
 				
@@ -128,22 +188,27 @@ public class Rover
 		output.println(json.toString());	
 	}
 	
+	private JSONObject WaitForExoResponse()
+	{
+		StringBuilder jsonBuilder = new StringBuilder();
+   		String line;
+   		while ((line = reader.readLine()) != null) 
+   		{
+   		     jsonBuilder.append(line);
+   		}
+   		JSONObject response = new JSONObject(jsonBuilder.toString());
+   		return response;
+	}
+	
 	private void Move()
-		{
+	{
 	    try 
 	    	{
 	        	JSONObject json = new JSONObject();
 	       		json.put("CMD", "move");
 	       		writer.println(json.toString());
-	       		 
-	       		StringBuilder jsonBuilder = new StringBuilder();
-	       		String line;
-	       		while ((line = reader.readLine()) != null) 
-	       		{
-	       		     jsonBuilder.append(line);
-	       		}
-	       		 
-	       		JSONObject response = new JSONObject(jsonBuilder.toString());
+	       		JSONObject response = WaitForExoResponse();
+	       		
 	       		if (response.has("POSITION")) 
 	       		{
 	       		    JSONObject position = response.getJSONObject("POSITION");
@@ -164,15 +229,7 @@ public class Rover
 	        JSONObject json = new JSONObject();
 	        json.put("CMD", "scan");
 	        writer.println(json.toString());
-
-	        StringBuilder jsonBuilder = new StringBuilder();
-	        String line;
-	        while ((line = reader.readLine()) != null) 
-	        { 
-	            jsonBuilder.append(line);
-	        }
-
-	        JSONObject response = new JSONObject(jsonBuilder.toString());
+	        JSONObject response = WaitForExoResponse();
 	        if (response.has("MEASURE")) 
 	        { 
 	            JSONObject measure = response.getJSONObject("MEASURE");
@@ -193,11 +250,10 @@ public class Rover
 	{ 
 	    try 
 	    { 
-	        JSONObject json = new JSONObject();
-	        json.put("type", "scan");
-
 	        JSONObject scanResponse = new JSONObject();
-	        scanResponse.put("Coords", Arrays.toString(property.getCoordinates()));
+	        jsonResponse.put("type", "scan");
+	        scanResponse.put("xPostion", property.GetxPosition());
+	        scanResponse.put("yPostion", property.GetyPosition());
 	        scanResponse.put("surface", property.getSurface().toString());
 	        scanResponse.put("temperature", property.getTemperature());
 
@@ -371,44 +427,5 @@ public class Rover
 	{
 		throws Exception not implemented
 	}
-	
-		private enum Directions
-	{
-		EAST,
-		SOUTH,
-		WEST,
-		NORTH
-	}
-	
-		private enum RoverState
-		{
-		    NEW(0),
-		    IDLE(1),
-		    AUTO(2),
-		    BUSY(3),
-		    CRASHED(4),
-		    RECHARGING(5),
-		    DECOMMISSIONED(9);
-
-		    private final int stateId;
-
-		    RoverState(int stateId) {
-		        this.stateId = stateId;
-		    }
-
-		    public int getStateId() {
-		        return this.stateId;
-		    }
-
-		    public static RoverState GetState(int id) {
-		        for (RoverState rs : RoverState.values()) {
-		            if (rs.getStateId() == id) 
-		            {  
-		                return rs;  
-		            }
-		        }
-		        throw new IllegalArgumentException("Ungültige ID für RoverState: " + id); 
-		    }
-		}
 }   
 	

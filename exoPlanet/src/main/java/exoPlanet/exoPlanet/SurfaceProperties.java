@@ -1,17 +1,32 @@
 public class SurfaceProperties 
 {
+	public enum Surfaces
+	{
+		NICHTS,
+		SAND,
+		GEROELL,
+		FELS,
+		WASSER,
+		PFANZEN,
+		MORAST,
+		LAVA,
+		BLOCKED,
+		UNKNOWN
+	}
+	
 	private Surfaces surface;
-    private int[] position = new int[2];
+    private int xPosition;
+    private int yPosition;
     private float temperature;
     private int scanScore;
     private int rechargeScore;
     private int distance;
-
+    
     public SurfaceProperties(Surfaces surface, int x, int y, float temperature)
 	{
         this.surface = surface;
-        final this.position[0] = x;
-        final this.position[1] = y;
+        final this.xPosition = x;
+        final this.yPosition = y;
         this.temperature = temperature;
     }
 
@@ -96,7 +111,6 @@ public class SurfaceProperties
         this.rechargeScore = rechargeScore;
     }
 
-
     public void setDistance(DistanceFunction distance) 
 	{
         this.distance = distance;
@@ -107,19 +121,5 @@ public class SurfaceProperties
        int distance = Math.abs(position[0] - roverCoords[0]) + Math.abs(position[1] - roverCoords[1]);
        int disScore = 5 * (Math.log(x + 1) / Math.log(11));
        return disScore;
-	}
-	
-	public enum Surfaces
-	{
-		NICHTS,
-		SAND,
-		GEROELL,
-		FELS,
-		WASSER,
-		PFANZEN,
-		MORAST,
-		LAVA,
-		BLOCKED,
-		UNKNOWN
 	}
 }
