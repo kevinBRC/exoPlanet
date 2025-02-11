@@ -1,4 +1,7 @@
+package main.java.exoPlanet.exoPlanet;
+
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -8,10 +11,6 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.json.*;
-
-import SurfaceProperties.Surfaces;
-import exoPlanet.*;
-import exoPlanet.exoPlanet.RoverServer;
 
 public class Rover
 {
@@ -64,10 +63,10 @@ public class Rover
 	public Directions direction;
 	public JSONObject internalBuffer;
 	private Socket Exo = new Socket();
-	private JSONObject CommandBuffer;
+	private String internalCommandBuffer;
 	private boolean infoFlag = false;
-	public PrintWriter output = new PrintWriter(Exo.getOutputStream());
-	public BufferedReader input = new BufferedReader(new InputStreamReader(Exo.getInputStream()));
+	public PrintWriter output;
+	public BufferedReader input;
 	private int charge;
 	
 	public boolean getInfoFlag() //RoverServer can read new info from Buffer, if this returns true
@@ -85,16 +84,39 @@ public class Rover
 		this.id = id;
 	}
 	
-	
+	public String getDirection()
+	{
+		String dir = this.direction.toString();
+		return dir;
+	}
 	
 	public void ConnectToExoplanet(String addressExoplanet, String portExoplanet)
 	{
-		//throws Exception not implemented;
+		try {
+			this.Exo = new Socket("", 0);
+			this.output = new PrintWriter(Exo.getOutputStream(), true);
+			this.input = new BufferedReader(new InputStreamReader(Exo.getInputStream()));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void Disconnect()
+	{
+		try {
+			this.output.close();
+			this.input.close();
+			this.Exo.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	
 	
-	private void ExecuteCommand (String command) // befehl ist string
+	public void ExecuteCommand (String command) // befehl ist string
 	{
 		JSONObject action = new JSONObject(command);
 		String type = action.getString("type");
@@ -110,6 +132,8 @@ public class Rover
 				break;
 				
 			case "land":
+				SurfaceProperties surfaceInstance;
+				
 				this.xPosition = action.getInt("xPosition");
 				this.yPosition = action.getInt("yPosition");
 				Random RANDOM = new Random();
@@ -125,7 +149,14 @@ public class Rover
 				JSONObject response = WaitForExoResponse();
 				if(response.getString("CMD") == "landed")
 				{
-					StoreScanResults(SurfaceProperties.SurfaceProperties(response.getString("GROUND"), this.xPosition, this.yPosition, response.getDouble("TEMP"));
+					    JSONObject measure = response.getJSONObject("MEASURE");
+			            measure.put("X", this.xPosition)
+			            	   .put("Y", this.yPosition);
+			            StoreScanResult(measure);
+					    /*SurfaceProperties.Surfaces surface = SurfaceProperties.Surfaces.valueOf(measure.getString("GROUND").toUpperCase());
+			            float temperature = (float) measure.getDouble("TEMP");
+			            StoreScanResults(surfaceInstance.SurfaceProperties(response.getString("GROUND"), this.xPosition, this.yPosition, response.getDouble("TEMP"));*/
+					
 				}
 				else
 				{
@@ -153,14 +184,17 @@ public class Rover
 				break;
 				
 			case "move-and-scan":
-			
-				output.Exo("mvscan");
-				ErrorHandler(input.Exo());
+				Move();
+				Scan();
+				//ErrorHandler(input.Exo());
 				//will send {"type":"scan"\n, "id": "{roverId}",\n "success": "{boolean}",\n "scanResponse": "{"Coords": "[int, int]",\n "surface": {"String"},\n "temperature": {int}\n}",\n "position": "[int, int]",\n "direction": "{String}", "crashed": "{boolean}"}
 				break;
 				
 			case "exit":
-				output.Exo("exit");
+				JSONObject json = new JSONObject();
+				json.put("CMD", "exit");
+				output.println(json.toString());
+				Disconnect();
 				UpdateState(9);
 				//will send {"type":"response"\n, "success":"bool}
 				break;
@@ -196,10 +230,15 @@ public class Rover
 	{
 		StringBuilder jsonBuilder = new StringBuilder();
    		String line;
-   		while ((line = input.readLine()) != null) 
-   		{
-   		     jsonBuilder.append(line);
-   		}
+   		try {
+			while ((line = input.readLine()) != null) 
+			{
+			     jsonBuilder.append(line);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
    		JSONObject response = new JSONObject(jsonBuilder.toString());
    		return response;
 	}
@@ -233,16 +272,18 @@ public class Rover
 	    { 
 	        JSONObject json = new JSONObject();
 	        json.put("CMD", "scan");
-	        writer.println(json.toString());
+	        output.println(json.toString());
 	        JSONObject response = WaitForExoResponse();
-	        if (response.has("MEASURED")) 
+	        if (response.has("MEASURE")) 
 	        { 
 	            JSONObject measure = response.getJSONObject("MEASURE");
-	            Surfaces surface = Surfaces.valueOf(measure.getString("GROUND").toUpperCase());
+	            measure.put("X", CalcPosition()[0])
+	                   .put("Y", CalcPosition()[1]);
+	            /*SurfaceProperties.Surfaces surface = SurfaceProperties.Surfaces.valueOf(measure.getString("GROUND").toUpperCase());
 	            float temperature = (float) measure.getDouble("TEMP");
 	            int[] scanPos = CalcPosition();
-	            SurfaceProperties scannedProperty = new SurfaceProperties(surface, scanPos[0], scanPos[1], temperature);
-	            StoreScanResult(scannedProperty);
+	            SurfaceProperties scannedProperty = new SurfaceProperties(surface, scanPos[0], scanPos[1], temperature);*/
+	            StoreScanResult(measure);
 	        } 
 	    } 
 	    catch (Exception e) 
@@ -251,19 +292,28 @@ public class Rover
 	    } 
 	}
 	
-	private void StoreScanResult(SurfaceProperties property) 
+	private int GetxPosition()
+	{
+		return this.xPosition;
+	}
+	
+	private void StoreScanResult(JSONObject response) 
 	{ 
 	    try 
 	    { 
-	        JSONObject scanResponse = new JSONObject();
-	        jsonResponse.put("type", "scan");
-	        scanResponse.put("xPostion", property.GetxPosition());
-	        scanResponse.put("yPostion", property.GetyPosition());
+	        this.internalBuffer = response;
+	        setInfoFlag(true);
+	    	/*  JSONObject scanResponse = new JSONObject();
+	        int[] pos = property.GetPosition();
+	        scanResponse.put("type", "scan");
+	        scanResponse.put("xPostion", pos[0]);
+	        scanResponse.put("yPostion", pos[1]);
 	        scanResponse.put("surface", property.getSurface().toString());
 	        scanResponse.put("temperature", property.getTemperature());
 
-	        json.put("scanResponse", scanResponse.toString());
+	        scanResponse.put("scanResponse", scanResponse.toString());
 	        this.internalBuffer.put("", scanResponse);
+	        */
 	    } 
 	    catch (Exception e) 
 	    { 
@@ -273,25 +323,25 @@ public class Rover
 
 	private int[] CalcPosition ()
 	{
-		String dir = direction;
+		String dir = direction.toString();
 		int[] nextPos = new int[2];
 		switch (dir) 
 		{
                case "EAST":
-                   nextPos[0] = this.position[0] + 1;
-				   nextPos[1] = this.position[1];
+                   nextPos[0] = this.xPosition + 1;
+				   nextPos[1] = this.yPosition;
                    break;
                case "SOUTH":
-					nextPos[1] = this.position[1] + 1;
-				   nextPos[0] = this.position[0];
+					nextPos[1] = this.yPosition + 1;
+				   nextPos[0] = this.xPosition;
                    break;
                case "WEST":
-					nextPos[0] = this.position[0] - 1;
-				   nextPos[1] = this.position[1];
+					nextPos[0] = this.xPosition - 1;
+				   nextPos[1] = this.yPosition;
                    break;
                case "NORTH":
-					nextPos[1] = this.position[1] - 1;
-				   nextPos[0] = this.position[0];
+					nextPos[1] = this.yPosition - 1;
+				   nextPos[0] = this.xPosition;
                    break;
 		}
 		return nextPos;
@@ -304,11 +354,11 @@ public class Rover
 	        JSONObject json = new JSONObject();
 	        json.put("CMD", "rotate");
 	        json.put("ROTATION", rotation);
-	        writer.println(json.toString());
+	        output.println(json.toString());
 
 	        StringBuilder jsonBuilder = new StringBuilder();
 	        String line;
-	        while ((line = reader.readLine()) != null) 
+	        while ((line = input.readLine()) != null) 
 	        { 
 	            jsonBuilder.append(line);
 	        }
@@ -316,7 +366,8 @@ public class Rover
 	        JSONObject response = new JSONObject(jsonBuilder.toString());
 	        if (response.has("DIRECTION")) 
 	        { 
-	            direction = response.getString("DIRECTION");
+	            String dir = response.getString("DIRECTION");
+	            direction = Directions.valueOf(dir);
 	        } 
 	    } 
 	    catch (Exception e) 
@@ -326,7 +377,7 @@ public class Rover
 	}
 
 	
-	public void RunStateMachine()
+/*	public void RunStateMachine()
 	{
 		int state;
 		switch (state)
@@ -360,8 +411,8 @@ public class Rover
 				//dead
 				break;
 				
-	}
-	
+	}*/
+	/*
 	private void ErrorHandler(JSONObject message)
 	{
 		if (message.optString("CMD") == "crashed")
@@ -379,11 +430,11 @@ public class Rover
 					break;
 				
 				default:
-				throws Exception ex;
+				//throws Exception ex;
 			}
 		}
 	}
-	
+	*/
 	private void SetIncommingCommandBuffer()
 	{
 		new Thread(() -> 
@@ -391,7 +442,7 @@ public class Rover
 	        try 
 	        { 
 	            String line;
-	            while ((line = reader.readLine()) != null) 
+	            while ((line = input.readLine()) != null) 
 	            { 
 	                internalCommandBuffer = line;
 	            } 
@@ -405,17 +456,17 @@ public class Rover
 	
 	private void AutoPilot()
 	{
-		throws Exception not implemented;
+		//throws Exception not implemented;
 	}
 	
 	public JSONObject GetInternalBuffer()
 	{
-		return internalBuffer;
+		return this.internalBuffer;
 	}
 	
-	public int GetId();
+	public int GetId()
 	{
-		return id;
+		return this.id;
 	}
 	
 	private void SaveToBuffer(JSONObject message)
@@ -430,7 +481,7 @@ public class Rover
 	
 	public void UpdateState(int i)
 	{
-		throws Exception not implemented
+		//throws Exception not implemented
 	}
 }   
 	

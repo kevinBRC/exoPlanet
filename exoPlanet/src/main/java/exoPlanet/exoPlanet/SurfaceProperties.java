@@ -1,3 +1,7 @@
+
+import org.json.JSONObject;
+
+
 public class SurfaceProperties 
 {
 	public enum Surfaces
@@ -17,16 +21,16 @@ public class SurfaceProperties
 	private Surfaces surface;
     private int xPosition;
     private int yPosition;
-    private float temperature;
+    private double temperature;
     private int scanScore;
     private int rechargeScore;
     private int distance;
     
-    public SurfaceProperties(Surfaces surface, int x, int y, float temperature)
+    public SurfaceProperties(Surfaces surface, int x, int y, double temperature)
 	{
         this.surface = surface;
-        final this.xPosition = x;
-        final this.yPosition = y;
+        this.xPosition = x;
+        this.yPosition = y;
         this.temperature = temperature;
     }
 
@@ -34,7 +38,8 @@ public class SurfaceProperties
 	{
         JSONObject json = new JSONObject();
         json.put("surface", surface.toString());
-        json.put("position", position);
+        json.put("X", xPosition);
+        json.put("Y", yPosition);
         json.put("temperature", temperature);
         return json;
     }
@@ -42,29 +47,32 @@ public class SurfaceProperties
     private void updateScanScore() 
 	{
         int unknownCount = 0;
-        if (isUnknown(position[0] + 1, position[1])) unknownCount++;
-        if (isUnknown(position[0] - 1, position[1])) unknownCount++;
-        if (isUnknown(position[0], position[1] + 1)) unknownCount++;
-        if (isUnknown(position[0], position[1] - 1)) unknownCount++;
+        if (isUnknown(xPosition + 1, yPosition)) unknownCount++;
+        if (isUnknown(xPosition - 1, yPosition)) unknownCount++;
+        if (isUnknown(xPosition, yPosition + 1)) unknownCount++;
+        if (isUnknown(xPosition, yPosition - 1)) unknownCount++;
 
         switch (unknownCount) 
         {
-            case 0 -> scanScore = 0;
-            case 1 -> scanScore = 1;
-            case 2 -> scanScore = 3;
-            case 3 -> scanScore = 5;
-            default -> scanScore = 0;
-            ScoreDeduction();
+            case 0: scanScore = 0; break;
+            case 1: scanScore = 1; break;
+            case 2: scanScore = 3; break;
+            case 3: scanScore = 5; break;
+            default: scanScore = 0; break;
         }
+        ScoreDeduction();
     }
 	
     private void ScoreDeduction()
     {
-    	if (this.surface == "LAVA" || this.surface == "UNKOWN" || this.surface == "BLOCKED")
-    	{
-    		this.scanScore = scanScore - 5;
-    	}
+        if (this.surface == Surfaces.LAVA || 
+            this.surface == Surfaces.UNKNOWN || 
+            this.surface == Surfaces.BLOCKED) 
+        {
+            this.scanScore -= 5;
+        }
     }
+
     
 	private boolean isUnknown(int x, int y) 
 	{
@@ -78,12 +86,12 @@ public class SurfaceProperties
 
     private Surfaces getSurfaceAt(int x, int y)
     {
-    	Surfaces here = 
+    	//Surfaces here = 
     }
     
     public int[] getPosition() 
 	{
-        return position;
+        return new int[] {xPosition,yPosition};
     }
 
     public void setTemperature(int temperature) 
@@ -111,15 +119,11 @@ public class SurfaceProperties
         this.rechargeScore = rechargeScore;
     }
 
-    public void setDistance(DistanceFunction distance) 
-	{
-        this.distance = distance;
+    private int CalcDistance(int roverX, int roverY) 
+    {
+        int distance = Math.abs(xPosition - roverX) + Math.abs(yPosition - roverY);
+        int disScore = (int) (5 * (Math.log10(distance + 1) / Math.log10(11))); 
+        return disScore;
     }
 
-	private int CalcDistance(int[] roverCoords) //is high if field is far away
-	{
-       int distance = Math.abs(position[0] - roverCoords[0]) + Math.abs(position[1] - roverCoords[1]);
-       int disScore = 5 * (Math.log(x + 1) / Math.log(11));
-       return disScore;
-	}
 }

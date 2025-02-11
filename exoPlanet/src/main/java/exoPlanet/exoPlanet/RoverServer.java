@@ -1,4 +1,4 @@
-package exoPlanet.exoPlanet;
+package main.java.exoPlanet.exoPlanet;
 
 import java.io.*;
 import org.json.*;
@@ -8,7 +8,8 @@ import exoPlanet.*;
 
 
 
-public class RoverServer {
+public class RoverServer 
+{
 	private Queue<JSONObject> sharedBuffer;
 	private PrintWriter out;
 	private ConnectionListener cl;

@@ -1,4 +1,4 @@
-package exoPlanet.exoPlanet;
+package main.java.exoPlanet.exoPlanet;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
