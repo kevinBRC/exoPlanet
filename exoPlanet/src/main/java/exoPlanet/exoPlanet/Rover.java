@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 import org.json.*;
@@ -68,6 +69,13 @@ public class Rover
 	public PrintWriter output;
 	public BufferedReader input;
 	private int charge;
+	private boolean autopilotActive = false;
+    private Auto_and_Pathfinding pathfinder;
+
+    public void setPathfinder(Auto_and_Pathfinding pathfinder) 
+    {
+        this.pathfinder = pathfinder;
+    }
 	
 	public boolean getInfoFlag() //RoverServer can read new info from Buffer, if this returns true
 	{
@@ -114,9 +122,7 @@ public class Rover
 		}
 	}
 	
-	
-	
-	public void ExecuteCommand (String command) // befehl ist string
+	public void ExecuteCommand (String command)
 	{
 		JSONObject action = new JSONObject(command);
 		String type = action.getString("type");
@@ -144,9 +150,7 @@ public class Rover
 				//will send {"type":"DEPLOY"\n, "id":int, "planet":{"WIDTH":int,"HEIGHT":int}}
 				break;
 				
-			case "land":
-				//SurfaceProperties surfaceInstance;
-				
+			case "land":		
 				this.xPosition = action.getInt("xPosition");
 				this.yPosition = action.getInt("yPosition");
 				Random RANDOM = new Random();
@@ -171,9 +175,6 @@ public class Rover
 			            	   .put("crashed", false)
 			            	   .put("type", "LAND");
 			            StoreScanResult(measure);
-					    /*SurfaceProperties.Surfaces surface = SurfaceProperties.Surfaces.valueOf(measure.getString("GROUND").toUpperCase());
-			            float temperature = (float) measure.getDouble("TEMP");
-			            StoreScanResults(surfaceInstance.SurfaceProperties(response.getString("GROUND"), this.xPosition, this.yPosition, response.getDouble("TEMP"));*/
 				}
 				else
 				{
@@ -217,8 +218,13 @@ public class Rover
 				break;
 				
 			case "enable-auto":
-				UpdateState(2);
-				//will send {"type":"response"\n, "success":"bool"}
+				autopilotActive = !autopilotActive;
+				JSONObject jsonAuto = new JSONObject();
+				jsonAuto.put("type", "SWITCH_AUTOPILOT")
+						.put("id", this.id)
+						.put("autopilot", autopilotActive);
+				Autopilot();
+				//will send {"type":"SWITCH_AUTOPILOT"\n, "id":int, "autopilot":bool}
 				// and continue with scans
 				//finally {"type":"response"\n,"status":"RoverState(mostly idle,crashed,decommissioned)"}
 				break;
@@ -270,7 +276,7 @@ public class Rover
    		return response;
 	}
 	
-	private void Move()
+	public void Move()
 	{
 	    try 
 	    	{
@@ -298,7 +304,7 @@ public class Rover
 	    }
 	}
 	
-	private void Scan() 
+	public void Scan() 
 	{ 
 	    try 
 	    { 
@@ -324,7 +330,7 @@ public class Rover
 	    } 
 	}
 	
-	private void StoreScanResult(JSONObject response) 
+	public void StoreScanResult(JSONObject response) 
 	{ 
 	    try 
 	    { 
@@ -337,17 +343,6 @@ public class Rover
 	        		.put("id", this.id);
 	    	this.internalBuffer = toBuffer;
 	        setInfoFlag(true);
-	    	/*  JSONObject scanResponse = new JSONObject();
-	        int[] pos = property.GetPosition();
-	        scanResponse.put("type", "scan");
-	        scanResponse.put("xPostion", pos[0]);
-	        scanResponse.put("yPostion", pos[1]);
-	        scanResponse.put("surface", property.getSurface().toString());
-	        scanResponse.put("temperature", property.getTemperature());
-
-	        scanResponse.put("scanResponse", scanResponse.toString());
-	        this.internalBuffer.put("", scanResponse);
-	        */
 	    } 
 	    catch (Exception e) 
 	    { 
@@ -381,7 +376,7 @@ public class Rover
 		return nextPos;
 	}
 	
-	private void Rotate(String rotation) 
+	public void Rotate(String rotation) 
 	{ 
 	    try 
 	    { 
@@ -492,9 +487,32 @@ public class Rover
 	    }).start();
 	}
 	
-	private void AutoPilot()
+	public void Autopilot() 
+    {
+        if (pathfinder == null) 
+        {
+            throw new IllegalStateException("Something went wrong :(");
+        }
+
+        autopilotActive = true;
+
+        while (autopilotActive) 
+        {
+            pathfinder.executePathfinding();
+        }
+    }
+
+    public void stopAutopilot() 
+    {
+        autopilotActive = false;
+    }
+	
+	public int[] GetPos()
 	{
-		//throws Exception not implemented;
+		int[] pos = new int[2];
+		pos[0] = xPosition;
+		pos[1] = yPosition;
+		return pos;
 	}
 	
 	public JSONObject GetInternalBuffer()
