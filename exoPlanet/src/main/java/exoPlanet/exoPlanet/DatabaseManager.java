@@ -467,8 +467,8 @@ public class DatabaseManager {
 			PreparedStatement pstmt = conn.prepareStatement(sql);
 			ResultSet rs = pstmt.executeQuery()) {
 
-			if (rs.next()) { // Falls ein Ergebnis vorhanden ist
-				maxId = rs.getInt(1); // Die erste Spalte enthält das MAX-Ergebnis
+			if (rs.next()) { 
+				maxId = rs.getInt(1); 								// overwrite the default value
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
