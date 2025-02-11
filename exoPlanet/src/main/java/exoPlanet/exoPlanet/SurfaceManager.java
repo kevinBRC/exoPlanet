@@ -72,9 +72,10 @@ public class SurfaceManager
     
     private boolean CheckForUndesiredSurface()
     {
-        if (currentField.getSurface() == Surfaces.LAVA || 
-            currentField.getSurface() == Surfaces.UNKNOWN || 
-            currentField.getSurface() == Surfaces.BLOCKED) 
+        if (currentField.getSurface() == Surfaces.LAVA 
+        	|| currentField.getSurface() == Surfaces.UNKNOWN 
+            || currentField.getSurface() == Surfaces.NICHTS
+            || currentField.getSurface() == Surfaces.BLOCKED) 
         {
             return true;
         }

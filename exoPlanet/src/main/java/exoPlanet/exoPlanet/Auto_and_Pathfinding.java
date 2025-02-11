@@ -132,6 +132,7 @@ public class Auto_and_Pathfinding
     {
         return field.getSurface() == SurfaceProperties.Surfaces.LAVA 
         	 ||field.getSurface() == SurfaceProperties.Surfaces.UNKNOWN
+        	 ||field.getSurface() == SurfaceProperties.Surfaces.NICHTS
              ||field.getSurface() == SurfaceProperties.Surfaces.BLOCKED;
     }
 
