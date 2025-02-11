@@ -8,7 +8,10 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.json.*;
+
+import SurfaceProperties.Surfaces;
 import exoPlanet.*;
+import exoPlanet.exoPlanet.RoverServer;
 
 public class Rover
 {
@@ -65,7 +68,6 @@ public class Rover
 	private boolean infoFlag = false;
 	public PrintWriter output = new PrintWriter(Exo.getOutputStream());
 	public BufferedReader input = new BufferedReader(new InputStreamReader(Exo.getInputStream()));
-	private RoverServer roverManager;
 	private int charge;
 	
 	public boolean getInfoFlag() //RoverServer can read new info from Buffer, if this returns true
@@ -80,10 +82,7 @@ public class Rover
 		
 	public Rover(int id)
 	{
-		Random RANDOM = new Random();
-		direction = direction[RANDOM.nextInt(Directons.length)];
 		this.id = id;
-		this.internalBuffer = new JSONObject();
 	}
 	
 	
@@ -114,14 +113,19 @@ public class Rover
 				this.xPosition = action.getInt("xPosition");
 				this.yPosition = action.getInt("yPosition");
 				Random RANDOM = new Random();
-				this.direction = direction[RANDOM.nextInt(Directons.length)];
-				jToExo.put("CMD","land");
-				jToExo.put("POSITION", {this.xPosition},{this.yPosition},{this.direction})
+				Directions[] values = Directions.values();
+			    this.direction= values[new Random().nextInt(values.length)];
+				jToExo.put("CMD","land")
+						.put("POSITION", new JSONObject()
+					    .put("X", this.xPosition)
+					    .put("Y", this.yPosition)
+					    .put("DIRECTION", this.direction));
+
 				SendCommandToExo(jToExo);
 				JSONObject response = WaitForExoResponse();
 				if(response.getString("CMD") == "landed")
 				{
-					StoreScanResults(SurfaceProperties(response.getString("GROUND"), this.xPosition, this.yPosition, response.getDouble("TEMP"));
+					StoreScanResults(SurfaceProperties.SurfaceProperties(response.getString("GROUND"), this.xPosition, this.yPosition, response.getDouble("TEMP"));
 				}
 				else
 				{
@@ -192,7 +196,7 @@ public class Rover
 	{
 		StringBuilder jsonBuilder = new StringBuilder();
    		String line;
-   		while ((line = reader.readLine()) != null) 
+   		while ((line = input.readLine()) != null) 
    		{
    		     jsonBuilder.append(line);
    		}
@@ -206,14 +210,15 @@ public class Rover
 	    	{
 	        	JSONObject json = new JSONObject();
 	       		json.put("CMD", "move");
-	       		writer.println(json.toString());
+	       		output.println(json.toString());
 	       		JSONObject response = WaitForExoResponse();
 	       		
 	       		if (response.has("POSITION")) 
 	       		{
-	       		    JSONObject position = response.getJSONObject("POSITION");
-	       		    direction = position.getString("DIRECTION");
-	       		    position = {position.getInt("X"), position.getInt("Y")};
+	       		    JSONObject responsePosition = response.getJSONObject("POSITION");
+	       		    this.direction = Directions.valueOf(responsePosition.getString("DIRECTION"));
+	       		    this.xPosition = responsePosition.getInt("X");
+	       		    this.yPosition = responsePosition.getInt("Y");    
 	       		}
 	    	} 
 	    catch (Exception e) 
@@ -230,7 +235,7 @@ public class Rover
 	        json.put("CMD", "scan");
 	        writer.println(json.toString());
 	        JSONObject response = WaitForExoResponse();
-	        if (response.has("MEASURE")) 
+	        if (response.has("MEASURED")) 
 	        { 
 	            JSONObject measure = response.getJSONObject("MEASURE");
 	            Surfaces surface = Surfaces.valueOf(measure.getString("GROUND").toUpperCase());
