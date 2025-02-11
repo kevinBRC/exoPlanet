@@ -1,13 +1,15 @@
-package exoPlanet.exoPlanet;
+package main.java.exoPlanet.exoPlanet;
 
 import java.io.*;
 import org.json.*;
 import java.net.*;
 import java.util.Queue;
+import exoPlanet.*;
 
 
 
-public class RoverServer {
+public class RoverServer 
+{
 	private Queue<JSONObject> sharedBuffer;
 	private PrintWriter out;
 	private ConnectionListener cl;
@@ -85,14 +87,41 @@ public class RoverServer {
 				sendToClient(answer);
 				break;
 			case "MOVE":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "MOVE");
+				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "LAND":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "LAND");
+				answer.put("id", entry.getInt("id"));
+				answer.put("Coords", entry.optString("Coords"))
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "SCAN":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "SCAN");
+				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "MOVE_SCAN":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "MOVE-AND-SCAN");
+				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "ROTATE":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "ROTATE");
+				answer.put("id", entry.getInt("id"));
+				answer.put("rotation", entry.optString("rotation"))
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "EXIT":
 				success = exitRover(entry.getInt("id"));
@@ -101,16 +130,60 @@ public class RoverServer {
 				sendToClient(answer);
 				break;
 			case "GETPOS":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "GETPOS");
+				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "CHARGE":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "CHARGE");
+				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "GET_CHARGE":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "GET_CHARGE");
+				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			case "SWITCH_AUTOPILOT":
+				success = deployRover(entry.getInt("id"));
+				answer.put("type", "ENABLE-AUTO");
+				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
+				sendToClient(answer);
 				break;
 			default:
 				break;
 		}
+	}
+	
+	public JSONObject SendRoverAnswer(Rover roverInstace)
+	{
+		
+		PrintWriter toBS = new PrintWriter(client.getOutputStream(), true);
+		while (true) 
+		   { 
+			if (roverInstace.getInfoFlag()) 
+		       {					
+				JSONObject roverAnswer = roverInstance.GetInternalBuffer();
+				roverAnswer.put("id", roverInstance.GetId());
+				toBS.println(roverAnswer.toString());
+				roverInstance.SetInfoFlagTo0();
+		       } 
+		       try 
+		       { 
+		    	   Thread.sleep(100); 
+		       } 
+		       catch (InterruptedException e) 
+		       { 
+		    	   e.printStackTrace();
+		       } 
+		  } 
 	}
 	
 	public void sendToClient(JSONObject message) {
@@ -165,6 +238,13 @@ public class RoverServer {
 	                    System.out.println("Client verbunden: " + client.getInetAddress());
 	                    RoverServer rs = new RoverServer(client);
 	                    rs.handleClientMessage();
+	                    for(int i = 0; i < this.roverEntries.length(); i++)
+	            		{
+	            			if (roverEntries.get(i) != null)
+	            			{
+	            				SendRoverAnswer(roverEntries.get(i));
+	            			}
+	            		}
 	            }
 	            
             } catch (IOException e) 
