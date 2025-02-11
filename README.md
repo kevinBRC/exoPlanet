@@ -34,8 +34,8 @@
 ### To Client
 - deploy: {"type": "DEPLOY",\n "id": "{roverId}"\n, planet:{string}}
 - Land: {"type": "LAND",\n "id": "{roverId},\n "xPositionRover": "int", "yPositionRover": "int" "direction": {int},\n "success": "{boolean}, "crashed": "{boolean}", "surface": {string}}
-- Scan: {"type": "SCAN",\n "id": "{roverId}", "scanResponse": "{"xCoord": "{int}",\n "yCoord": "{int}" "surface": {"String"},\n "temperature": {int}\n}"}
-- Move and Scan: {"type": "SCAN",\n "id": "{roverId}", "scanResponse": "{"xCoord": "{int}",\n "yCoord": "{int}" "surface": {"String"},\n "temperature": {int}\n}", "success": "{boolean}, "xPositionRover": "int", "yPositionRover": "int", "crashed": "{boolean}"}
+- Scan: {"type": "SCAN",\n "id": "{roverId}", "scanResponse": "{"xCoord": "{int}",\n "yCoord": "{int}" "surface": {"String"},\n "temperature": {double}\n}"}
+- Move and Scan: {"type": "SCAN",\n "id": "{roverId}", "scanResponse": "{"xCoord": "{int}",\n "yCoord": "{int}" "surface": {"String"},\n "temperature": {double}\n}", "success": "{boolean}, "xPositionRover": "int", "yPositionRover": "int", "crashed": "{boolean}"}
 - rotate: {"type": "ROTATE"\n , "id": "{roverId}",\n "rotation": "{direction}"}
 - exit: {"type": "EXIT",\n "id": "{roverId}"}
 - get Position: {"type": "GETPOS",\n "id": "{roverId}", "xPositionRover": "int", "yPositionRover": "int"}

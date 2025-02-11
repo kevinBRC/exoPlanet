@@ -71,44 +71,67 @@ public class RoverServer {
 		boolean success;
 		JSONObject entry = new JSONObject();
 		JSONObject answer = new JSONObject();
+		Rover currRover = null;
 		
-		while(entry == null) 
-		{
-			entry = this.sharedBuffer.poll();
-		}
-		
+		do{entry = this.sharedBuffer.poll();}while (entry == null);
+		currRover = getRoverById(entry.getInt("id"));
+
 		switch(entry.getString("type"))
 		{
 			case "DEPLOY":
 				success = deployRover(entry.getInt("id"));
+				if(success)
+				{
+					currRover.ExecuteCommand(entry.toString());
+				}
 				answer.put("type", "DEPLOY");
 				answer.put("id", entry.getInt("id"));
+				answer.put("success", success);
 				sendToClient(answer);
 				break;
 			case "MOVE":
-				success = deployRover(entry.getInt("id"));
+				currRover.ExecuteCommand(entry.toString());
+
+				// TODO build correct answer for the bodenstation
 				answer.put("type", "MOVE");
 				answer.put("id", entry.getInt("id"));
-				answer.put("success", success);
+				answer.put("xPositionRover", entry.getJSONObject("POSITION").getInt("X"));
+				answer.put("yPositionRover", entry.getJSONObject("POSITION").getInt("Y"));
+				answer.put("crashed", success);
 				sendToClient(answer);
 				break;
 			case "LAND":
 				success = deployRover(entry.getInt("id"));
+
+				// TODO build correct answer for the bodenstation
 				answer.put("type", "LAND");
 				answer.put("id", entry.getInt("id"));
-				answer.put("Coords", entry.optString("Coords"))
+				answer.put("xPositionRover", entry.getJSONObject("POSITION").getInt("X"));
+				answer.put("yPositionRover", entry.getJSONObject("POSITION").getInt("Y"));
+				answer.put("direction", currRover.getDirection());
+				answer.put("crashed", success);
 				answer.put("success", success);
+				answer.put("surface", entry.getString("MEASURE"));
 				sendToClient(answer);
 				break;
 			case "SCAN":
 				success = deployRover(entry.getInt("id"));
+
+				// TODO build correct answer for the bodenstation
 				answer.put("type", "SCAN");
 				answer.put("id", entry.getInt("id"));
-				answer.put("success", success);
+				JSONObject scanResponse = new JSONObject();
+				scanResponse.put("xCoord", );
+				scanResponse.put("yCoord", );
+				scanResponse.put("surface", );
+				scanResponse.put("temperature", );
+				answer.put("scanResponse", scanResponse);
 				sendToClient(answer);
 				break;
 			case "MOVE_SCAN":
 				success = deployRover(entry.getInt("id"));
+
+				// TODO build correct answer for the bodenstation
 				answer.put("type", "MOVE-AND-SCAN");
 				answer.put("id", entry.getInt("id"));
 				answer.put("success", success);
@@ -116,6 +139,8 @@ public class RoverServer {
 				break;
 			case "ROTATE":
 				success = deployRover(entry.getInt("id"));
+
+				// TODO build correct answer for the bodenstation
 				answer.put("type", "ROTATE");
 				answer.put("id", entry.getInt("id"));
 				answer.put("rotation", entry.optString("rotation"))
@@ -124,12 +149,16 @@ public class RoverServer {
 				break;
 			case "EXIT":
 				success = exitRover(entry.getInt("id"));
+
+				// TODO build correct answer for the bodenstation
 				answer.put("type", "EXIT");
 				answer.put("id", entry.getInt("id"));
 				sendToClient(answer);
 				break;
 			case "GETPOS":
 				success = deployRover(entry.getInt("id"));
+
+				// TODO build correct answer for the bodenstations
 				answer.put("type", "GETPOS");
 				answer.put("id", entry.getInt("id"));
 				answer.put("success", success);
@@ -137,6 +166,8 @@ public class RoverServer {
 				break;
 			case "CHARGE":
 				success = deployRover(entry.getInt("id"));
+
+				// TODO build correct answer for the bodenstation
 				answer.put("type", "CHARGE");
 				answer.put("id", entry.getInt("id"));
 				answer.put("success", success);
@@ -144,6 +175,8 @@ public class RoverServer {
 				break;
 			case "GET_CHARGE":
 				success = deployRover(entry.getInt("id"));
+
+				// TODO build correct answer for the bodenstation
 				answer.put("type", "GET_CHARGE");
 				answer.put("id", entry.getInt("id"));
 				answer.put("success", success);
@@ -151,6 +184,8 @@ public class RoverServer {
 				break;
 			case "SWITCH_AUTOPILOT":
 				success = deployRover(entry.getInt("id"));
+
+				// TODO build correct answer for the bodenstation
 				answer.put("type", "ENABLE-AUTO");
 				answer.put("id", entry.getInt("id"));
 				answer.put("success", success);
@@ -205,11 +240,13 @@ public class RoverServer {
 	
 	public boolean exitRover(int id)
 	{
+		Rover temp = null;
 		for(int i = 0; i < this.roverEntries.length(); i++)
 		{
 			if (this.roverEntries.get(i) != null)
 			{
-				if (this.roverEntries.getInt(i) == id)
+				temp = (Rover) this.roverEntries.get(i);
+				if (temp.GetId() == id)
 				{
 					this.roverEntries.put(i, JSONObject.NULL);
 					return true;
@@ -219,10 +256,27 @@ public class RoverServer {
 		return false;
 	}
 
-	public boolean moveRover
+	public Rover getRoverById(int id)
+	{
+		Rover temp = null;
+		for(int i = 0; i < this.roverEntries.length(); i++)
+		{
+			if (this.roverEntries.get(i) != null)
+			{
+				temp = (Rover) this.roverEntries.get(i);
+				if (temp.GetId() == id)
+				{
+					return temp;
+				}
+			}
+		}
+		return null;
+	}
+
 	
 	
-    public static void main(String[] args) {
+	
+    public static void startServer() {
         int port = 12345;  // Port, auf dem der Server horcht
         
         // Erstellen des Serversockets innerhalb eines try-with-resources-Blocks

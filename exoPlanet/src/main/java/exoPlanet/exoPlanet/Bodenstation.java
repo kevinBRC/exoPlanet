@@ -899,8 +899,16 @@ public class Bodenstation {
 				{
 					this.planet = this.convertPlanetStringToInt(entry.getString("planet"));
 				}
-				this.dm.insertRover(entry.getInt("id"), "rover", this.planet, -1, 1, -1, -1, -1, -1, LocalDateTime.now(), "rover deployed", -1, -1);		// -1 -> not initialited yet
-				this.dm.insertStatusHistory(highestS_id, entry.getInt("id"), highestA_id, entry.getBoolean("success"), "", "");
+				if(entry.getBoolean("success"))
+				{
+					this.dm.insertRover(entry.getInt("id"), "rover", this.planet, -1, 1, -1, -1, -1, -1, LocalDateTime.now(), "rover deployed", -1, -1);		// -1 -> not initialited yet
+					this.dm.insertStatusHistory(highestS_id, entry.getInt("id"), highestA_id, entry.getBoolean("success"), "", "");
+				}
+				else
+				{
+					String errorMessage = "Error: Rover "+ entry.getString("id") + " wasn't able to be dpolyed";
+					this.showError(errorMessage);
+				}
 				break;
 
 			case "MOVE":
@@ -917,11 +925,11 @@ public class Bodenstation {
 
 
 			case "SCAN":
-				this.dm.insertGroundPosMapping(this.getNewHighestPrimaryKey("m_id", "GroundPosMapping"), this.planet, this.convertGroundStringToInt(entry.getJSONObject("scanResponse").getString("surface")), entry.getJSONObject("scanResponse").getInt("xCoords"), entry.getJSONObject("scanResponse").getInt("yCoords"), entry.getJSONObject("scanResponse").getInt("Temperature"));
+				this.dm.insertGroundPosMapping(this.getNewHighestPrimaryKey("m_id", "GroundPosMapping"), this.planet, this.convertGroundStringToInt(entry.getJSONObject("scanResponse").getString("surface")), entry.getJSONObject("scanResponse").getInt("xCoords"), entry.getJSONObject("scanResponse").getInt("yCoords"), entry.getJSONObject("scanResponse").getDouble("Temperature"));
 				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
 				break;
 			case "MOVE_SCAN":
-				this.dm.insertGroundPosMapping(this.getNewHighestPrimaryKey("m_id", "GroundPosMapping"), this.planet, this.convertGroundStringToInt(entry.getJSONObject("scanResponse").getString("surface")),  entry.getJSONObject("scanResponse").getInt("xCoords"), entry.getJSONObject("scanResponse").getInt("yCoords"), entry.getJSONObject("scanResponse").getInt("Temperature"));
+				this.dm.insertGroundPosMapping(this.getNewHighestPrimaryKey("m_id", "GroundPosMapping"), this.planet, this.convertGroundStringToInt(entry.getJSONObject("scanResponse").getString("surface")),  entry.getJSONObject("scanResponse").getInt("xCoords"), entry.getJSONObject("scanResponse").getInt("yCoords"), entry.getJSONObject("scanResponse").getDouble("Temperature"));
 				this.dm.updateRoverXCoord(entry.getInt("xPositionRover"), entry.getInt("id"));
 				this.dm.updateRoverYCoord(entry.getInt("yPositionRover"), entry.getInt("id"));
 				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);

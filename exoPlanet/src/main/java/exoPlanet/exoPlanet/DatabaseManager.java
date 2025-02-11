@@ -47,7 +47,7 @@ public class DatabaseManager {
      * @param energy: Current energy level of the rover
      * @param temp: Current temperature at the rover's location
      */
-	public static void insertRover(int roverId, String name, int planet, int last_activity, int clientId, int ground, int direction, int xCoord, int yCoord, LocalDateTime timestamp, String textprotocoll, int energy, int temp) {
+	public static void insertRover(int roverId, String name, int planet, int last_activity, int clientId, int ground, int direction, int xCoord, int yCoord, LocalDateTime timestamp, String textprotocoll, int energy, double temp) {
 		String sql = "INSERT INTO robot (r_id, Name, p_id, lastActivity, clientid, g_id, d_id, posx, posy, dateandtime, textprotocoll, energy, temp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	    try (Connection conn = getConnection();
@@ -65,7 +65,7 @@ public class DatabaseManager {
 	        pstmt.setTimestamp(10, Timestamp.valueOf(timestamp));
 	        pstmt.setString(11, textprotocoll);	
 	        pstmt.setInt(12, energy);
-	        pstmt.setInt(13, temp);
+	        pstmt.setDouble(13, temp);
 	        
 	        int rowsInserted = pstmt.executeUpdate();
 
@@ -286,7 +286,7 @@ public class DatabaseManager {
      * @param errorProtocoll: Log or protocol of errors encountered
      * @param lastError: Description of the last recorded error
      */
-	public static void insertStatusHistory(int statusId, int roverId, int activityId, boolean isCrashed,String errorProtocoll, String lastError) {
+	public static void insertStatusHistory(int statusId, int roverId, int activityId, boolean isCrashed, String errorProtocoll, String lastError) {
 		String sql = "INSERT INTO StatusHistory (s_id, r_id, a_id, isCrashed, errorProtocoll, lasterror) VALUES (?, ?, ?, ?, ?, ?)";
 
 	    try (Connection conn = getConnection();
@@ -486,7 +486,7 @@ public class DatabaseManager {
      * @param posy: Y-coordinate of the mapped position
      * @param temp: Temperature at the specified position
      */
-	public static void insertGroundPosMapping(int m_id, int p_id, int g_id, int posx, int posy, int temp)
+	public static void insertGroundPosMapping(int m_id, int p_id, int g_id, int posx, int posy, double temp)
 	{
 		String sql = "INSERT INTO GroundPosMapping (m_id, p_id, g_id, posx, posy, temp) VALUES (?, ?, ?, ?, ?, ?)";
 
@@ -498,7 +498,7 @@ public class DatabaseManager {
 	        pstmt.setInt(3, g_id);
 	        pstmt.setInt(4, posx);
 	        pstmt.setInt(5, posy);
-	        pstmt.setInt(6, temp);
+	        pstmt.setDouble(6, temp);
 
 	        int affectedRows = pstmt.executeUpdate();
 	        System.out.println(affectedRows + " row(s) inserted.");
