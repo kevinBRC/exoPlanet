@@ -902,7 +902,7 @@ public class Bodenstation {
 					this.planet = this.convertPlanetStringToInt(entry.getString("planet"));
 				}
 				this.dm.insertRover(entry.getInt("id"), "rover", this.planet, -1, 1, -1, -1, -1, -1, LocalDateTime.now(), "rover deployed", -1, -1);		// -1 -> not initialited yet
-				this.dm.insertStatusHistory(highestS_id, entry.getInt("id"), highestA_id, "", entry.getBoolean("success"), "", "");
+				this.dm.insertStatusHistory(highestS_id, entry.getInt("id"), highestA_id, entry.getBoolean("success"), "", "");
 				break;
 
 			case "MOVE":
