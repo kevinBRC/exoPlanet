@@ -126,13 +126,26 @@ public class Rover
 			case "deploy":
 				jToExo.put("CMD", "orbit");
 				SendCommandToExo(jToExo);
-				this.internalBuffer = WaitForExoResponse();
-				setInfoFlag(true);
-				//will send {"type":"response"\n, "success":"bool"}
+				JSONObject response = WaitForExoResponse();
+				if (response.getString("CMD") == "init")
+				{
+					JSONObject toBuffer = new JSONObject();
+					toBuffer.put("type", "DEPLOY")
+							.put("id", this.id)
+							.put("planet", response.get("SIZE"));
+					this.internalBuffer = toBuffer;
+					setInfoFlag(true);
+				}
+				else
+				{
+					this.internalBuffer = response;
+				}
+				
+				//will send {"type":"DEPLOY"\n, "id":int, "planet":{"WIDTH":int,"HEIGHT":int}}
 				break;
 				
 			case "land":
-				SurfaceProperties surfaceInstance;
+				//SurfaceProperties surfaceInstance;
 				
 				this.xPosition = action.getInt("xPosition");
 				this.yPosition = action.getInt("yPosition");
@@ -146,21 +159,25 @@ public class Rover
 					    .put("DIRECTION", this.direction));
 
 				SendCommandToExo(jToExo);
-				JSONObject response = WaitForExoResponse();
-				if(response.getString("CMD") == "landed")
+				JSONObject landResponse = WaitForExoResponse();
+				if(landResponse.getString("CMD") == "landed")
 				{
-					    JSONObject measure = response.getJSONObject("MEASURE");
+					    JSONObject measure = landResponse.getJSONObject("MEASURE");
 			            measure.put("X", this.xPosition)
-			            	   .put("Y", this.yPosition);
+			            	   .put("Y", this.yPosition)
+			            	   .put("id", this.id)
+			            	   .put("direction", this.direction)
+			            	   .put("success", true)
+			            	   .put("crashed", false)
+			            	   .put("type", "LAND");
 			            StoreScanResult(measure);
 					    /*SurfaceProperties.Surfaces surface = SurfaceProperties.Surfaces.valueOf(measure.getString("GROUND").toUpperCase());
 			            float temperature = (float) measure.getDouble("TEMP");
 			            StoreScanResults(surfaceInstance.SurfaceProperties(response.getString("GROUND"), this.xPosition, this.yPosition, response.getDouble("TEMP"));*/
-					
 				}
 				else
 				{
-					this.internalBuffer = response;
+					this.internalBuffer = landResponse;
 				}
 				setInfoFlag(true);
 				//will send {"type":"response"\n, "success":"bool"}
@@ -207,7 +224,14 @@ public class Rover
 				break;
 				
 			case "getpos":
-				// will send {"type":"response"\n, "pos":"[int,int]"}
+				JSONObject getPosResponse = new JSONObject();
+				getPosResponse.put("type", "GETPOS")
+						.put("id", this.id)
+						.put("xPosition", this.xPosition)
+						.put("yPosition", this.yPosition);
+				this.internalBuffer = getPosResponse;
+				setInfoFlag(true);
+				// will send {"type":"GETPOS", "id":int, "xPosition":int, "yPosition":int}
 				break;
 				
 			case "charge":
@@ -215,6 +239,9 @@ public class Rover
 				break;
 				
 			case "get_charge":
+				JSONObject exoStatus = new JSONObject();
+				exoStatus.put("CMD", "status");
+				//not implemented
 				//will send {"type":"response"\n, "charge": "{charge as int}"}
 				break;
 				
@@ -257,7 +284,12 @@ public class Rover
 	       		    JSONObject responsePosition = response.getJSONObject("POSITION");
 	       		    this.direction = Directions.valueOf(responsePosition.getString("DIRECTION"));
 	       		    this.xPosition = responsePosition.getInt("X");
-	       		    this.yPosition = responsePosition.getInt("Y");    
+	       		    this.yPosition = responsePosition.getInt("Y");
+	       		    responsePosition.put("type", "MOVE")
+	       		    				.put("id", this.id)
+	       		    				.put("crashed", false);
+	       		    this.internalBuffer = responsePosition;
+	       		    setInfoFlag(true);  
 	       		}
 	    	} 
 	    catch (Exception e) 
@@ -292,16 +324,18 @@ public class Rover
 	    } 
 	}
 	
-	private int GetxPosition()
-	{
-		return this.xPosition;
-	}
-	
 	private void StoreScanResult(JSONObject response) 
 	{ 
 	    try 
 	    { 
-	        this.internalBuffer = response;
+	    	int[] pos = CalcPosition();
+	    	response.put("X", pos[0])
+	    			.put("Y", pos[1]);
+	    	JSONObject toBuffer = new JSONObject();
+	    	toBuffer.put("scanResponse", response.getString("MEASURE"));
+	        toBuffer.put("type", "SCAN")
+	        		.put("id", this.id);
+	    	this.internalBuffer = toBuffer;
 	        setInfoFlag(true);
 	    	/*  JSONObject scanResponse = new JSONObject();
 	        int[] pos = property.GetPosition();
@@ -368,7 +402,11 @@ public class Rover
 	        { 
 	            String dir = response.getString("DIRECTION");
 	            direction = Directions.valueOf(dir);
-	        } 
+	        }
+	        else
+	        {
+	        	this.internalBuffer = response;
+	        }
 	    } 
 	    catch (Exception e) 
 	    { 
