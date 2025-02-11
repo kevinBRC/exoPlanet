@@ -20,6 +20,49 @@ public class rover
 	private RoverServer roverManager;
 	private int charge;
 	
+	private enum Directions
+{
+	EAST,
+	SOUTH,
+	WEST,
+	NORTH
+}
+	
+	private enum RoverState
+	{
+	    NEW(0),
+	    IDLE(1),
+	    AUTO(2),
+	    BUSY(3),
+	    CRASHED(4),
+	    RECHARGING(5),
+	    DECOMMISSIONED(9);
+
+	    private final int stateId;
+
+	    RoverState(int stateId) 
+	    {
+	        this.stateId = stateId;
+	    }
+
+	    public int getStateId() 
+	    {
+	        return this.stateId;
+	    }
+
+	    public static RoverState GetState(int id) 
+	    {
+	        for (RoverState rs : RoverState.values()) 
+	        {
+	            if (rs.getStateId() == id) 
+	            {  
+	                return rs;  
+	            }
+	        }
+	        throw new IllegalArgumentException("Ungültige ID für RoverState: " + id); 
+	    }
+	}
+	
 	public boolean GetInfoFlag(); //RoverServer can read new info from Buffer, if this returns true
 	{
 		return infoFlag;
@@ -57,10 +100,10 @@ public class rover
 				break;
 				
 			case "land":
-				position = command.optString("Coords")
+				position = command.optString("Coords") //rewrite everywhere
 				Random RANDOM = new Random();
 				direction = direction[RANDOM.nextInt(Directons.length)];
-				output.Exo("land:POSITION|" + position[0] + "|" + position[1] + "|" + direction);
+				output.Exo("land:POSITION|" + position[0] + "|" + position[1] + "|" + direction); //put to JSON
 				//will send {"type":"response"\n, "success":"bool"}
 				break;
 				
@@ -73,7 +116,7 @@ public class rover
 				break;
 				
 			case "move":
-				Move();
+				Move(); //ErrorHandling
 				//will send {"type":"response"\n, "success":"bool"\n, "text":"string_if_something_happened"}
 				break;
 				
@@ -172,7 +215,7 @@ public class rover
 	            JSONObject measure = response.getJSONObject("MEASURE");
 	            Surfaces surface = Surfaces.valueOf(measure.getString("GROUND").toUpperCase());
 	            float temperature = (float) measure.getDouble("TEMP");
-	            int[] scanPos = CalcPosition;
+	            int[] scanPos = CalcPosition();
 	            SurfaceProperty scannedProperty = new SurfaceProperty(surface, scanPos[0], scanPos[1], temperature);
 	            StoreScanResult(scannedProperty);
 	        } 
@@ -366,43 +409,7 @@ public class rover
 		throws Exception not implemented
 	}
 	
-		private enum Directions
-	{
-		EAST,
-		SOUTH,
-		WEST,
-		NORTH
-	}
 	
-		private enum RoverState
-		{
-		    NEW(0),
-		    IDLE(1),
-		    AUTO(2),
-		    BUSY(3),
-		    CRASHED(4),
-		    RECHARGING(5),
-		    DECOMMISSIONED(9);
-
-		    private final int stateId;
-
-		    RoverState(int stateId) {
-		        this.stateId = stateId;
-		    }
-
-		    public int getStateId() {
-		        return this.stateId;
-		    }
-
-		    public static RoverState GetState(int id) {
-		        for (RoverState rs : RoverState.values()) {
-		            if (rs.getStateId() == id) 
-		            {  
-		                return rs;  
-		            }
-		        }
-		        throw new IllegalArgumentException("Ungültige ID für RoverState: " + id); 
-		    }
-		}
+		
 }   
 	
