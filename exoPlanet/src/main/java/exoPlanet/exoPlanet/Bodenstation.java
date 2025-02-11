@@ -42,6 +42,7 @@ public class Bodenstation {
 	private BufferedReader reader;				// Reader to read the console (in case of using the console instead of the GUI)
 	private boolean advancedModeOn;				// Flag whether the advanced mode is activated
 	private int planet;							// id of the planet that is visited in this run
+	private boolean useGui;
 	
 	// Attributes for the GUI
 	private JFrame frame;
@@ -411,7 +412,7 @@ public class Bodenstation {
 			
 	
 	}
-	public Bodenstation(String serverAddress, int port, String databaseAddress, String username, String password)
+	public Bodenstation(String serverAddress, int port, String databaseAddress, String username, String password, boolean useGui)
 	{
 		this.reader = new BufferedReader(new InputStreamReader(System.in));
 		this.serverAddress = serverAddress;
@@ -424,6 +425,7 @@ public class Bodenstation {
 		this.advancedModeOn = false;
 		this.planet = -1;
 		this.rm.start();
+		this.useGui = useGui;
 	}
 	
 	 /*
@@ -818,10 +820,6 @@ public class Bodenstation {
 		{
 			System.err.println("Invalid Command: " + input);
 		}
-		
-	
-
-		
 	}
 
 	/*
@@ -1087,10 +1085,27 @@ public class Bodenstation {
 	}
 	
 	public static void main(String[] args) {
-		Bodenstation bs = new Bodenstation("", 0, "localhost:3306", "root", "Kevin");
+		Bodenstation bs = new Bodenstation("", 0, "localhost:3306", "root", "Kevin", true);
 		DatabaseManager dm = new DatabaseManager("jdbc:mysql://localhost:3306/exoplanet?useSSL=false&serverTimezone=UTC", "root", "Kevin");
-		bs.initializeGUI();
-		bs.handleBuffer();
+		if(bs.useGui)
+		{
+			bs.initializeGUI();
+			//	main-loop with using the gui
+			while (true) 
+			{ 
+				bs.handleBuffer();
+			}
+		}
+		else
+		{
+			// main-loop with using the console
+			while (true) 
+			{ 
+				bs.readUserInput();
+				bs.handleBuffer();	
+			}
+		}
+
 		
 	}
 
