@@ -1,3 +1,4 @@
+package exoPlanet.exoPlanet;
 
 import org.json.JSONObject;
 
@@ -44,24 +45,24 @@ public class SurfaceProperties
         return json;
     }
 
-    private void updateScanScore() 
-	{
-        int unknownCount = 0;
-        if (isUnknown(xPosition + 1, yPosition)) unknownCount++;
-        if (isUnknown(xPosition - 1, yPosition)) unknownCount++;
-        if (isUnknown(xPosition, yPosition + 1)) unknownCount++;
-        if (isUnknown(xPosition, yPosition - 1)) unknownCount++;
-
-        switch (unknownCount) 
-        {
-            case 0: scanScore = 0; break;
-            case 1: scanScore = 1; break;
-            case 2: scanScore = 3; break;
-            case 3: scanScore = 5; break;
-            default: scanScore = 0; break;
-        }
-        ScoreDeduction();
-    }
+//    private void updateScanScore() 
+//	{
+//        int unknownCount = 0;
+//        if (isUnknown(xPosition + 1, yPosition)) unknownCount++;
+//        if (isUnknown(xPosition - 1, yPosition)) unknownCount++;
+//        if (isUnknown(xPosition, yPosition + 1)) unknownCount++;
+//        if (isUnknown(xPosition, yPosition - 1)) unknownCount++;
+//
+//        switch (unknownCount) 
+//        {
+//            case 0: scanScore = 0; break;
+//            case 1: scanScore = 1; break;
+//            case 2: scanScore = 3; break;
+//            case 3: scanScore = 5; break;
+//            default: scanScore = 0; break;
+//        }
+//        ScoreDeduction();
+//    }
 	
     private void ScoreDeduction()
     {
@@ -74,20 +75,21 @@ public class SurfaceProperties
     }
 
     
-	private boolean isUnknown(int x, int y) 
-	{
-    return getSurfaceAt(x, y) == Surfaces.UNKNOWN;
-	}
+//	private boolean isUnknown(int x, int y) 
+//	{
+//    return getSurfaceAt(x, y) == Surfaces.UNKNOWN;
+//	}
 
     public void setSurface(Surfaces surface) 
 	{
         this.surface = surface;
     }
 
-    private Surfaces getSurfaceAt(int x, int y)
-    {
-    	//Surfaces here = 
-    }
+//    private Surfaces getSurfaceAt(int x, int y)
+//    {
+//    	//Surfaces here = 
+//    	return this.surface;
+//    }
     
     public int[] getPosition() 
 	{

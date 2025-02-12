@@ -1,24 +1,25 @@
-package main.java.exoPlanet.exoPlanet;
+package exoPlanet.exoPlanet;
 
 import java.io.*;
 import org.json.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Queue;
-import exoPlanet.*;
 
 
 
 public class RoverServer 
 {
-	private Queue<JSONObject> sharedBuffer;
+	private Queue<JSONObject> sharedBuffer = new LinkedList<JSONObject>();
 	private PrintWriter out;
 	private ConnectionListener cl;
-	private Rover roverOne = JSONObject.NULL;
-	private Rover roverTwo = JSONObject.NULL;
-	private Rover roverThree = JSONObject.NULL;
-	private Rover roverFour = JSONObject.NULL;
-	private Rover roverFive = JSONObject.NULL;
-	private JSONArray roverEntries;
+	private Rover roverOne = null;
+	private Rover roverTwo = null;
+	private Rover roverThree = null;
+	private Rover roverFour = null;
+	private Rover roverFive = null;
+	private ArrayList<Rover> roverEntries = new ArrayList<Rover>();
 	
 	// This class reads the input of the client and saves it into the buffer so the main thread isn't needed for reading
 	public class ConnectionListener extends Thread{
@@ -44,9 +45,9 @@ public class RoverServer
 			try {
 				while ((inputLine = this.in.readLine()) != null) {
 				    JSONObject input = new JSONObject(inputLine);
-				    sharedBuffer.add(input);
-				    
+				    sharedBuffer.add(input);				    
 				}
+				System.out.println(inputLine);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -58,11 +59,11 @@ public class RoverServer
 			this.out = new PrintWriter(client.getOutputStream(), true);
 			this.cl = new ConnectionListener(client);
 			this.cl.start();
-			this.roverEntries.put(this.roverOne);
-			this.roverEntries.put(this.roverTwo);
-			this.roverEntries.put(this.roverThree);
-			this.roverEntries.put(this.roverFour);
-			this.roverEntries.put(this.roverFive);
+			this.roverEntries.add(this.roverOne);
+			this.roverEntries.add(this.roverTwo);
+			this.roverEntries.add(this.roverThree);
+			this.roverEntries.add(this.roverFour);
+			this.roverEntries.add(this.roverFive);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -73,7 +74,7 @@ public class RoverServer
 		JSONObject entry = new JSONObject();
 		JSONObject answer = new JSONObject();
 		
-		while(entry == null) 
+		while(entry == null || entry.isEmpty()) 
 		{
 			entry = this.sharedBuffer.poll();
 		}
@@ -97,7 +98,7 @@ public class RoverServer
 				success = deployRover(entry.getInt("id"));
 				answer.put("type", "LAND");
 				answer.put("id", entry.getInt("id"));
-				answer.put("Coords", entry.optString("Coords"))
+				answer.put("Coords", entry.optString("Coords"));
 				answer.put("success", success);
 				sendToClient(answer);
 				break;
@@ -119,7 +120,7 @@ public class RoverServer
 				success = deployRover(entry.getInt("id"));
 				answer.put("type", "ROTATE");
 				answer.put("id", entry.getInt("id"));
-				answer.put("rotation", entry.optString("rotation"))
+				answer.put("rotation", entry.optString("rotation"));
 				answer.put("success", success);
 				sendToClient(answer);
 				break;
@@ -162,18 +163,18 @@ public class RoverServer
 		}
 	}
 	
-	public JSONObject SendRoverAnswer(Rover roverInstace)
+	public JSONObject SendRoverAnswer(Rover roverInstance)
 	{
 		
-		PrintWriter toBS = new PrintWriter(client.getOutputStream(), true);
+//		PrintWriter toBS = new PrintWriter(client.getOutputStream(), true);
 		while (true) 
 		   { 
-			if (roverInstace.getInfoFlag()) 
+			if (roverInstance.getInfoFlag()) 
 		       {					
 				JSONObject roverAnswer = roverInstance.GetInternalBuffer();
 				roverAnswer.put("id", roverInstance.GetId());
-				toBS.println(roverAnswer.toString());
-				roverInstance.SetInfoFlagTo0();
+				out.println(roverAnswer.toString());
+				roverInstance.setInfoFlag(false);
 		       } 
 		       try 
 		       { 
@@ -192,12 +193,12 @@ public class RoverServer
 	
 	// For easier handling -> detect if one rover is unused (null)
 	public boolean deployRover(int id){
-		for(int i = 0; i < this.roverEntries.length(); i++)
+		for(int i = 0; i < this.roverEntries.size(); i++)
 		{
 			if(this.roverEntries.get(i) == JSONObject.NULL)
 			{
 				Rover rover = new Rover(id);
-				this.roverEntries.put(i, rover);
+				this.roverEntries.add(i, rover);
 				return true;
 			}
 		}
@@ -206,13 +207,13 @@ public class RoverServer
 	
 	public boolean exitRover(int id)
 	{
-		for(int i = 0; i < this.roverEntries.length(); i++)
+		for(int i = 0; i < this.roverEntries.size(); i++)
 		{
 			if (this.roverEntries.get(i) != null)
 			{
-				if (this.roverEntries.getInt(i) == id)
+				if (this.roverEntries.get(i).GetId() == id)
 				{
-					this.roverEntries.put(i, JSONObject.NULL);
+					this.roverEntries.set(i, null);
 					return true;
 				}
 			}
@@ -220,7 +221,7 @@ public class RoverServer
 		return false;
 	}
 
-	public boolean moveRover
+//	public boolean moveRover
 	
 	
     public static void main(String[] args) {
@@ -238,11 +239,11 @@ public class RoverServer
 	                    System.out.println("Client verbunden: " + client.getInetAddress());
 	                    RoverServer rs = new RoverServer(client);
 	                    rs.handleClientMessage();
-	                    for(int i = 0; i < this.roverEntries.length(); i++)
+	                    for(int i = 0; i < rs.roverEntries.size(); i++)
 	            		{
-	            			if (roverEntries.get(i) != null)
+	            			if (rs.roverEntries.get(i) != null)
 	            			{
-	            				SendRoverAnswer(roverEntries.get(i));
+	            				rs.SendRoverAnswer(rs.roverEntries.get(i));
 	            			}
 	            		}
 	            }

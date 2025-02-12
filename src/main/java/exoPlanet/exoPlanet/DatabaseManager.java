@@ -1,4 +1,4 @@
-package main.java.exoPlanet.exoPlanet;
+package exoPlanet.exoPlanet;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -25,27 +25,27 @@ public class DatabaseManager {
 	public static Connection getConnection() throws SQLException 
 	{
 	    return DriverManager.getConnection(url, username, password);
+//	    return DriverManager.getConnection("jdbc:mariadb://localhost:3306/exoplanet?user=root&password=1182");
 	}
 	
-	public static void insertRover(int roverId, String name, int planet, int last_activity, int clientId, int ground, int direction, int xCoord, int yCoord, LocalDateTime timestamp, String textprotocoll, int energy, int temp) {
-		String sql = "INSERT INTO robot (r_id, Name, p_id, lastActivity, clientid, g_id, d_id, posx, posy, dateandtime, textprotocoll, energy, temp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
+	public void insertRover(int roverId, String name, int planet, int last_activityId, int groundId, int direction, int xCoord, int yCoord, LocalDateTime timestamp, String textprotocoll, int energy, float temp) {
+		String sql = "INSERT INTO robot (r_id, Name, p_id, a_id, g_id, d_id, posx, posy, dateandtime, textprotocoll, energy, temp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+										//R_ID, Name, Temp, PosX, PosY, Energy, DateAndTime, Textprotocoll, D_ID, A_ID, P_ID, G_ID
 	    try (Connection conn = getConnection();
 	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
 	    	pstmt.setInt(1, roverId);
 	        pstmt.setString(2, name);
 	        pstmt.setInt(3, planet);
-	        pstmt.setInt(4, last_activity);
-	        pstmt.setInt(5, clientId);
-	        pstmt.setInt(6, ground);
-	        pstmt.setInt(7, direction);
-	        pstmt.setInt(8, xCoord);
-	        pstmt.setInt(9, yCoord);
-	        pstmt.setTimestamp(10, Timestamp.valueOf(timestamp));
-	        pstmt.setString(11, textprotocoll);	
-	        pstmt.setInt(12, energy);
-	        pstmt.setInt(13, temp);
+	        pstmt.setInt(4, last_activityId);
+	        pstmt.setInt(5, groundId);
+	        pstmt.setInt(6, direction);
+	        pstmt.setInt(7, xCoord);
+	        pstmt.setInt(8, yCoord);
+	        pstmt.setTimestamp(9, Timestamp.valueOf(timestamp));
+	        pstmt.setString(10, textprotocoll);	
+	        pstmt.setInt(11, energy);
+	        pstmt.setFloat(12, temp);
 	        
 	        int rowsInserted = pstmt.executeUpdate();
 
@@ -59,7 +59,7 @@ public class DatabaseManager {
 	}
 	
 	
-	public static void updateRoverName(String name, int id) {
+	public void updateRoverName(String name, int id) {
 		String sql = "UPDATE robot SET name = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
@@ -76,7 +76,7 @@ public class DatabaseManager {
 	    }
 	}
 
-	public static void updateRoverCharge(int charge, int id) {
+	public void updateRoverCharge(int charge, int id) {
 		String sql = "UPDATE robot SET charge = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
@@ -93,8 +93,8 @@ public class DatabaseManager {
 	    }
 	}
 	
-	public static void updateRoverPlanet(int planet, int id) {
-	    String sql = "UPDATE robot SET planet = ? WHERE r_id = ?";
+	public void updateRoverPlanet(int planet, int id) {
+	    String sql = "UPDATE robot SET p_id = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
 	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -110,8 +110,8 @@ public class DatabaseManager {
 	    }
 	}
 	
-	public static void updateRoverLastActivity(int last_activity, int id) {
-	    String sql = "UPDATE robot SET last activity = ? WHERE r_id = ?";
+	public void updateRoverLastActivity(int last_activity, int id) {
+	    String sql = "UPDATE robot SET last a_id = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
 	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -127,26 +127,8 @@ public class DatabaseManager {
 	    }
 	}
 	
-	
-	public static void updateRoverClientId(int clientId, int id) {
-	    String sql = "UPDATE robot SET clientid = ? WHERE r_id = ?";
-
-	    try (Connection conn = getConnection();
-	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-	        pstmt.setInt(1, clientId);
-	        pstmt.setInt(2, id);
-
-	        int affectedRows = pstmt.executeUpdate();
-	        System.out.println(affectedRows + " row(s) inserted.");
-
-	    } catch (SQLException e) {
-	        e.printStackTrace();
-	    }
-	}
-	
-	public static void updateRoverGround(int ground, int id) {
-	    String sql = "UPDATE robot SET ground = ? WHERE r_id = ?";
+	public  void updateRoverGround(int ground, int id) {
+	    String sql = "UPDATE robot SET g_id = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
 	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -162,8 +144,8 @@ public class DatabaseManager {
 	    }
 	}
 	
-	public static void updateRoverDirection(int direction, int id) {
-	    String sql = "UPDATE robot SET direction = ? WHERE r_id = ?";
+	public  void updateRoverDirection(int direction, int id) {
+	    String sql = "UPDATE robot SET d_id = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
 	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -179,7 +161,7 @@ public class DatabaseManager {
 	    }
 	}
 	
-	public static void updateRoverXCoord(int xCoord, int id) {
+	public  void updateRoverXCoord(int xCoord, int id) {
 	    String sql = "UPDATE robot SET posx = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
@@ -196,7 +178,7 @@ public class DatabaseManager {
 	    }
 	}
 	
-	public static void updateRoverYCoord(int yCoord, int id) {
+	public  void updateRoverYCoord(int yCoord, int id) {
 	    String sql = "UPDATE robot SET posy = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
@@ -213,7 +195,7 @@ public class DatabaseManager {
 	    }
 	}
 	
-	public static void updateRoverTimestamp(LocalDateTime timestamp, int id) {
+	public  void updateRoverTimestamp(LocalDateTime timestamp, int id) {
 	    String sql = "UPDATE robot SET timestamp = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
@@ -230,7 +212,7 @@ public class DatabaseManager {
 	    }
 	}
 	
-	public static void updateRoverTextprotocoll(String textprotocol, int id) {
+	public  void updateRoverTextprotocoll(String textprotocol, int id) {
 	    String sql = "UPDATE robot SET textprotocoll = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
@@ -247,8 +229,8 @@ public class DatabaseManager {
 	    }
 	}
 	
-	public static void insertLastActivity(int a_id, String name, boolean success) {
-		String sql = "INSERT INTO lastActivity (a_id, name, successful) VALUES (?, ?, ?)";
+	public void insertLastActivity(int a_id, String name, boolean success) {
+		String sql = "INSERT INTO lastActivity (a_id, name, success) VALUES (?, ?, ?)";
 
 	    try (Connection conn = getConnection();
 	         PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -265,7 +247,7 @@ public class DatabaseManager {
 	    }
 	}
 	
-	public static void insertStatusHistory(int statusId, int roverId, int activityId, String messdatenhistorie, boolean isCrashed,String errorProtocoll, String lastError) {
+	public  void insertStatusHistory(int statusId, int roverId, int activityId, String messdatenhistorie, boolean isCrashed,String errorProtocoll, String lastError) {
 		String sql = "INSERT INTO StatusHistory (s_id, r_id, a_id, isCrashed, errorProtocoll, lasterror) VALUES (?, ?, ?, ?, ?, ?)";
 
 	    try (Connection conn = getConnection();
@@ -286,7 +268,7 @@ public class DatabaseManager {
 	    }
 	}
 
-	public static void updateStatusHistoryActivityId(int roverId, int activityId) {
+	public  void updateStatusHistoryActivityId(int roverId, int activityId) {
 		String sql = "UPDATE StatusHistory SET a_id = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
@@ -303,7 +285,7 @@ public class DatabaseManager {
 	    }
 	}
 
-	public static void updateStatusHistoryIsCrashed(int roverId, boolean isCrashed) {
+	public  void updateStatusHistoryIsCrashed(int roverId, boolean isCrashed) {
 		String sql = "UPDATE StatusHistory SET isCrashed = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
@@ -320,7 +302,7 @@ public class DatabaseManager {
 	    }
 	}
 
-	public static void updateStatusHistoryLastError(int roverId, String lastError) {
+	public void updateStatusHistoryLastError(int roverId, String lastError) {
 		String sql = "UPDATE StatusHistory SET lastError = ? WHERE r_id = ?";
 
 	    try (Connection conn = getConnection();
@@ -337,7 +319,7 @@ public class DatabaseManager {
 	    }
 	}
 
-	public static void updateStatusHistoryMessdatenhistorie(int roverId, String newData) {
+	public void updateStatusHistoryMessdatenhistorie(int roverId, String newData) {
 		String sql = "SELECT Messdatenhistorie FROM statusHistory WHERE r_id = ?";
 		String messdatenhistorie = "";
 
@@ -372,7 +354,7 @@ public class DatabaseManager {
 		}
 	}
 
-	public static void updateStatusHistoryErrorProtocoll(int roverId, String newError) {
+	public void updateStatusHistoryErrorProtocoll(int roverId, String newError) {
 		String sql = "SELECT errorProtocoll FROM statusHistory WHERE r_id = ?";
 		String errorProtocoll = "";
 
@@ -407,9 +389,9 @@ public class DatabaseManager {
 		}
 	}
 
-	public static int getHighestPrimaryKey(String table, String searchedKey)
+	public int getHighestPrimaryKey(String table, String searchedKey)
 	{
-		String sql = "SELECT MAX(" + searchedKey + ") FROM " + table;
+		String sql = "SELECT coalesce(MAX(" + searchedKey + "),0) FROM " + table;
 		int maxId = -1; // Default-Wert, falls keine Daten vorhanden sind
 
 		try (Connection conn = getConnection();
@@ -426,7 +408,7 @@ public class DatabaseManager {
 		return maxId; // Gibt den höchsten Wert zurück (oder -1, falls kein Wert vorhanden)
 	}
 
-	public static void insertGroundPosMapping(int m_id, int p_id, int g_id, int posx, int posy, int temp)
+	public void insertGroundPosMapping(int m_id, int p_id, int g_id, int posx, int posy, float temp)
 	{
 		String sql = "INSERT INTO GroundPosMapping (m_id, p_id, g_id, posx, posy, temp) VALUES (?, ?, ?, ?, ?, ?)";
 
@@ -438,7 +420,7 @@ public class DatabaseManager {
 	        pstmt.setInt(3, g_id);
 	        pstmt.setInt(4, posx);
 	        pstmt.setInt(5, posy);
-	        pstmt.setInt(6, temp);
+	        pstmt.setFloat(6, temp);
 
 	        int affectedRows = pstmt.executeUpdate();
 	        System.out.println(affectedRows + " row(s) inserted.");
@@ -447,5 +429,85 @@ public class DatabaseManager {
 	        e.printStackTrace();
 	    }
 	}
+	
+	public int getRobotX(int id)
+	{
+		String sql = "SELECT PosX FROM Robot where R_ID=?";
+		ResultSet rs = null;
+		try (Connection conn = getConnection();
+				PreparedStatement pstmt = conn.prepareStatement(sql)) {
+			pstmt.setInt(1, id);
+			rs = pstmt.executeQuery();
+			if (rs.next()) {
+				return rs.getInt(1);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}finally {
+			if(rs != null) {
+				try {
+					rs.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		return 0; // Gibt den höchsten Wert zurück (oder -1, falls kein Wert vorhanden)
+	}
+	
+	public int getRobotY(int id)
+	{
+		String sql = "SELECT PosY FROM Robot where R_ID=?";
+		ResultSet rs = null;
+		try (Connection conn = getConnection();
+			PreparedStatement pstmt = conn.prepareStatement(sql)) {
+			pstmt.setInt(1, id);
+			rs = pstmt.executeQuery();
+			if (rs.next()) {
+				return rs.getInt(1);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}finally {
+			if(rs != null) {
+				try {
+					rs.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		return 0; // Gibt den höchsten Wert zurück (oder -1, falls kein Wert vorhanden)
+	}
 	  
+	public int getMaxRoverID()
+	{
+		String sql = "SELECT COALESCE(Max(R_ID),0) FROM Robot";
+		ResultSet rs = null;
+		try (Connection conn = getConnection();
+			PreparedStatement pstmt = conn.prepareStatement(sql)) {
+			rs = pstmt.executeQuery();
+			if (rs.next()) {
+				return rs.getInt(1);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}finally {
+			if(rs != null) {
+				try {
+					rs.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		return 0; // Gibt den höchsten Wert zurück (oder -1, falls kein Wert vorhanden)
+	}
+
 }

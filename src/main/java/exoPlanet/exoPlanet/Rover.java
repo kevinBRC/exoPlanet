@@ -1,4 +1,4 @@
-package main.java.exoPlanet.exoPlanet;
+package exoPlanet.exoPlanet;
 
 import java.io.BufferedReader;
 import java.io.IOException;
