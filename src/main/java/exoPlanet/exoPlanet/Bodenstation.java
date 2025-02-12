@@ -1,4 +1,4 @@
-package main.java.exoPlanet.exoPlanet;
+package exoPlanet.exoPlanet;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
@@ -31,18 +32,19 @@ import org.json.JSONObject;
 
 
 public class Bodenstation {
+	private static Bodenstation bs;
 	private DatabaseManager dm;
 	private RoverManager rm;
 	private String serverAddress;
 	private int port;
 	private String databaseAddress;
 	private boolean hasNotification;
-	private Queue<JSONObject> buffer;
+	
 	private JSONArray notifications;
 	private BufferedReader reader;
 	private JSONObject allRoverInformation;
 	private boolean advancedModeOn;
-	private int planet;
+	
 	
 	private JFrame frame;
     private JTabbedPane tabbedPane;
@@ -56,6 +58,9 @@ public class Bodenstation {
 		private BufferedReader readInput;
 		private Socket client;
 		private JSONObject roverAlive;
+		private Queue<JSONObject> buffer = new LinkedList<JSONObject>();
+		private int planet = -1;
+		private DatabaseManager dm;
 
         public RoverManager() 
 		{
@@ -64,6 +69,7 @@ public class Bodenstation {
         	this.roverAlive.put("latestId", 0);									// latest given id
         	this.roverAlive.put("rover", new JSONArray());						// ids of deployed rover that aren't exited yet
         	this.roverAlive.put("alreadyDeployed", new JSONArray());			// all ids of deployed rover (also those who are exited)
+        	this.dm = new DatabaseManager("jdbc:mysql://localhost:3306/exoplanet?useSSL=false&serverTimezone=UTC", "root", "1182");
 		}
 
         /*
@@ -91,32 +97,36 @@ public class Bodenstation {
 		 */
 		public void run() {
 		    try {
-		        String serverMessage;
-		        
-		        // if a message is detected -> write into buffer of the Bodenstation
-		        while ((serverMessage = this.readInput.readLine()) != null) {
-		        	try 
-		        	{
-		        		JSONObject entry = new JSONObject(serverMessage);
-			        	buffer.add(entry);
-		        	}
-		        	catch (Exception e)
-		        	{
-		        		System.err.println("Invalid JSON-format: " + serverMessage);
-		        	}
-		        	
-		        }
-		    } catch (IOException e) {
+//		    	while(true) {
+		    		this.readInput = new BufferedReader(new InputStreamReader(client.getInputStream()));
+		    		String serverMessage;
+		    		// if a message is detected -> write into buffer of the Bodenstation
+		    		while ((serverMessage = this.readInput.readLine()) != null) {
+		    			try 
+		    			{
+		    				JSONObject entry = new JSONObject(serverMessage);
+		    				buffer.add(entry);
+		    			}
+		    			catch (Exception e)
+		    			{
+		    				System.err.println("Invalid JSON-format: " + serverMessage);
+		    			}
+		    		}
+//	        	System.out.println(serverMessage);
+//		    		updateBuffer();
+		    		
+//		    	}
+		    } catch (Exception e) {
 		        System.err.println("Error while reading the server messages: " + e.getMessage());
 		    } finally {
 		        
-		        try {
-		            if (this.readInput != null) this.readInput.close();
-		            if (this.writeInput != null) this.writeInput.close();
-		            if (this.client != null) this.client.close();
-		        } catch (IOException e) {
-		            System.err.println("Error while closing the ressources: " + e.getMessage());
-		        }
+//		        try {
+//		            if (this.readInput != null) this.readInput.close();
+//		            if (this.writeInput != null) this.writeInput.close();
+//		            if (this.client != null) this.client.close();
+//		        } catch (Exception e) {
+//		            System.err.println("Error while closing the ressources: " + e.getMessage());
+//		        }
 		    }
 		}
 
@@ -198,8 +208,17 @@ public class Bodenstation {
 		 */
 		public boolean sendToServer(String message) 
 		{
-			// this.writeInput.print(message);
-			// this.writeInput.flush();			
+			
+			this.writeInput.print(message + "\n");
+			this.writeInput.flush();
+//			try {
+//				System.out.println(this.readInput.readLine());
+//				buffer.add(new JSONObject(this.readInput.readLine()));
+				updateBuffer();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 			return true;
 		}
 		
@@ -261,13 +280,26 @@ public class Bodenstation {
 			message.put("id", id);
 			if (scanAfterwards) 
 			{				
-				message.put("type", "SCAN_MOVE");
-
+				message.put("type", "MOVE_SCAN");
+				
 			}
 			else
 			{
-				message.put("type", "SCAN");
+				message.put("type", "MOVE");
 			}
+			
+			return sendToServer(message.toString());
+		}
+		
+		public boolean scan(int id)
+		{
+			if(!checkIfRoverAlive(id))
+				return false;
+			
+			JSONObject message = new JSONObject();
+			
+			message.put("id", id);		
+			message.put("type", "SCAN");
 			
 			return sendToServer(message.toString());
 		}
@@ -319,9 +351,9 @@ public class Bodenstation {
 			
 			JSONObject message = new JSONObject();
 			
-			message.put("type", "LAND");
+			message.put("type", "ROTATE");
 			message.put("id", id);
-			message.put("direction", direction.toUpperCase());
+			message.put("rotation", direction.toUpperCase());
 			
 			return sendToServer(message.toString());
 		}
@@ -399,8 +431,210 @@ public class Bodenstation {
 			// The answer will be read by the run method and handled by the handleNotification 
 		}
 		
-		
+		/*
+		 * @brief: reacts to the answers of the rover server saved into the buffer
+		 */
+		private void updateBuffer()
+		{
+			JSONObject entry = new JSONObject();
+			do
+			{
+				entry = this.buffer.poll();
+			}while (entry == null || entry.isEmpty());
+			System.out.println(entry);
 			
+			String type = entry.getString("CMD");
+//			boolean success = entry.getBoolean("success");
+			int highestA_id = this.getNewHighestPrimaryKey("lastActivity","a_id");
+			this.dm.insertLastActivity(highestA_id, type, true);
+			int highestS_id = this.getNewHighestPrimaryKey("statusHistory", "s_id");
+			switch (type.toUpperCase()) 
+			{
+				case "INIT":
+					if(this.planet < 0)
+					{
+						this.planet = this.convertPlanetStringToInt("default");//entry.getString("planet"));
+					}
+					this.dm.insertRover(entry.getInt("id"), "rover", this.planet, highestA_id, 1, 1, 0, 0, LocalDateTime.now(), "rover deployed", 100, -1);
+					this.dm.insertStatusHistory(highestS_id, entry.getInt("id"), highestA_id, "", false, "", "");
+					break;
+
+				case "MOVED":
+				case "LANDED":
+					this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
+					this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
+					this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+//					if (entry.getBoolean("crashed"))
+//					{
+//						this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), true);
+//					}
+					break;
+
+
+				case "SCANED":
+					this.dm.insertGroundPosMapping(this.getNewHighestPrimaryKey("GroundPosMapping","m_id"), this.planet, this.convertGroundStringToInt(entry.getJSONObject("MEASURE").getString("GROUND")),this.dm.getRobotX(entry.getInt("id")), this.dm.getRobotY(entry.getInt("id")), entry.getJSONObject("MEASURE").getFloat("TEMP"));
+					this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+					break;
+				case "MVSCANED":
+					this.dm.insertGroundPosMapping(this.getNewHighestPrimaryKey("GroundPosMapping","m_id"), this.planet, this.convertGroundStringToInt(entry.getJSONObject("MEASURE").getString("GROUND")), entry.getJSONObject("POSITION").getInt("X"), entry.getJSONObject("POSITION").getInt("Y"), entry.getJSONObject("MEASURE").getInt("TEMP"));
+					this.dm.updateRoverXCoord(entry.getJSONObject("POSITION").getInt("X"), entry.getInt("id"));
+					this.dm.updateRoverYCoord(entry.getJSONObject("POSITION").getInt("Y"), entry.getInt("id"));
+					this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+//					if (entry.getBoolean("crashed"))
+//					{
+//						this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), true);
+//					}
+					break;
+
+				case "ROTATED":
+					this.dm.updateRoverDirection(convertDirectionStringToInt(entry.getString("DIRECTION")), entry.getInt("id"));
+					this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+					break;
+
+				case "EXIT":
+					this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), true);								// Exit = crashed
+					this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+					break;
+
+				case "GETPOS":
+					this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
+					this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
+					this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+					break;
+
+				case "CHARGE":
+					break;
+				case "GET_CHARGE":
+					this.dm.updateRoverCharge(entry.getInt("charge"), entry.getInt("id"));
+					this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+					break;
+				case "SWITCH_AUTOPILOT":
+					break;
+				case "ERROR":
+					this.dm.updateStatusHistoryLastError(entry.getInt("id"), entry.getString("errorMessage"));
+					this.dm.updateStatusHistoryErrorProtocoll(entry.getInt("id"), entry.getString("errorMessage"));
+					this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), entry.getBoolean("crashed"));
+					this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
+					this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
+					this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+					this.showError(entry.getString("errorMessage"));
+					break;
+				case "CRASHED":
+					this.dm.updateStatusHistoryLastError(entry.getInt("id"), entry.getString("errorMessage"));
+					this.dm.updateStatusHistoryErrorProtocoll(entry.getInt("id"), entry.getString("errorMessage"));
+					this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), entry.getBoolean("crashed"));
+					this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
+					this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
+					this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
+					this.showError(entry.getString("errorMessage"));
+					break;
+
+				default:
+					System.err.println("Invalid answer: "+ type);
+					break;
+			}
+
+		}
+			
+		
+		/*
+		 * @brief: Looks for new content within the buffer. If new content is detected it handles it
+		 */
+		public void showError(String error)
+		{
+			SwingUtilities.invokeLater(() -> {
+		        JOptionPane.showMessageDialog(null, "Following error occurred: " + error, "Error", JOptionPane.ERROR_MESSAGE);
+		    });
+		}
+		
+		public int getNewHighestPrimaryKey(String table, String searchedKey) throws IllegalArgumentException 
+		{
+			int highestKey = this.dm.getHighestPrimaryKey(table, searchedKey);
+			
+			if(highestKey >= 0)
+			{
+				return highestKey + 1;
+			}
+
+			else
+			{
+				throw new IllegalArgumentException("No highest Primary Key was found");
+			}
+		}
+
+		public int convertPlanetStringToInt(String planet)
+		{
+			switch(planet)
+			{
+				case "default":
+					return 0;
+				
+				case "io":
+					return 1;
+
+				case "pandora":
+					return 2;
+				default:
+					break;
+			}
+			return -1;
+		}
+
+		public int convertGroundStringToInt(String ground)
+		{
+			switch(ground)
+			{
+				case "nichts":
+					return 0;
+				
+				case "sand":
+					return 1;
+
+				case "geroell":
+					return 2;
+				
+				case "fels":
+					return 3;
+				
+				case "wasser":
+					return 4;
+				
+				case "pflanzen":
+					return 5;
+				
+				case "morast":
+					return 6;
+				
+				case "lava":
+					return 7;
+				
+				default:
+					break;
+			}
+			return -1;
+		}
+
+		public int convertDirectionStringToInt(String direction)
+		{
+			switch(direction.toLowerCase())
+			{
+				case "north":
+					return 0;
+				
+				case "west":
+					return 1;
+
+				case "east":
+					return 2;
+				
+				case "south":
+					return 3;
+							
+				default:
+					break;
+			}
+			return -1;
+		}
 	
 	}
 	// TODO: parameters for DatabaseManager
@@ -413,11 +647,12 @@ public class Bodenstation {
 		this.hasNotification = false;
 		this.dm = new DatabaseManager(databaseAddress, username, password);
 		this.rm = new RoverManager();
-		this.buffer = new ArrayDeque<>();
+//		this.buffer = new ArrayDeque<>();
 		this.notifications = new JSONArray();
 		this.advancedModeOn = false;
-		this.planet = -1;
-		this.rm.start();
+		initializeGUI();
+//		this.planet = -1;
+//		this.rm.start();
 	}
 	
 	 /*
@@ -453,6 +688,9 @@ public class Bodenstation {
         	{
         		JOptionPane.showMessageDialog(frame, "Failed to connect to rover server");
         	}
+        	this.rm.start();
+//        	bs.updateBuffer();
+        	updateBuffer();
         });    
         
         
@@ -488,7 +726,12 @@ public class Bodenstation {
         frame.setVisible(true);
     }
     
-    /*
+    private void updateBuffer() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	/*
      * @brief: Fügt ein neues Rover-Kontrollpanel zur GUI hinzu
      */
     public void addRoverControlPanel(int roverId) {
@@ -498,6 +741,16 @@ public class Bodenstation {
             panel.setLayout(new FlowLayout());
 
             // Erstelle Buttons für die verschiedenen Befehle
+            JButton btnScan = new JButton("Scan");
+            btnScan.addActionListener(e -> {
+            	
+            	JSONArray cmd = new JSONArray();
+            	cmd.put("scan");
+            	cmd.put(roverId);
+            	handleUserInput(cmd);
+            	
+            });
+            
             JButton btnMove = new JButton("Move");
             btnMove.addActionListener(e -> {
 
@@ -509,7 +762,7 @@ public class Bodenstation {
             });
             
             JButton btnMoveScan = new JButton("Scan and Move");
-            btnMove.addActionListener(e -> {
+            btnMoveScan.addActionListener(e -> {
 
                     JSONArray cmd = new JSONArray();
                     cmd.put("mvscan");
@@ -589,7 +842,7 @@ public class Bodenstation {
                 if (direction != null) {
                     // Erstelle den JSON-Befehl mit Richtung
                     JSONArray cmd = new JSONArray();
-                    cmd.put("move");
+                    cmd.put("rotate");
                     cmd.put(roverId);
                     cmd.put(direction.toLowerCase());
                     handleUserInput(cmd);
@@ -650,9 +903,10 @@ public class Bodenstation {
             });
 
             // Füge die Buttons dem Panel  
+            panel.add(btnLand);
+            panel.add(btnScan);
             panel.add(btnMove);
             panel.add(btnMoveScan);
-            panel.add(btnLand);
             panel.add(btnRotate);
             panel.add(btnExit);
 			if (this.advancedModeOn)
@@ -725,27 +979,24 @@ public class Bodenstation {
 		
 		try 
 		{
-			switch (command) 
+			switch (command.toLowerCase()) 
 			{
 				case "deploy":
-				case "DEPLOY":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed"); 
 					this.rm.deployRover(digit);
 					break;
 			
 				case "move":
-				case "MOVE":
-					if(digit < 0)
-						throw new IllegalArgumentException("No digit was passed");
-					if (appendix.equals(""))
-						throw new IllegalArgumentException("No appendix was passed");
+//					if(digit < 0)
+//						throw new IllegalArgumentException("No digit was passed");
+//					if (appendix.equals(""))
+//						throw new IllegalArgumentException("No appendix was passed");
 					this.rm.move(digit, false);
 					break;
 					
 				// TODO add planet to land on
 				case "land":
-				case "LAND":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
 					if (coords[0] == -1 && coords[1] == -1)
@@ -754,24 +1005,21 @@ public class Bodenstation {
 					break;
 				
 				case "scan":
-				case "SCAN":
-					if(digit < 0)
-						throw new IllegalArgumentException("No digit was passed");
-					String message = "{'type': 'SCAN',\n 'id': '" + digit + "'}";
-					this.rm.sendToServer(message);
+//					if(digit < 0)
+//						throw new IllegalArgumentException("No digit was passed");
+//					String message = "{'type': 'SCAN',\n 'id': '" + digit + "'}";
+					this.rm.scan(digit);
 					break;
 				
 				case "mvscan":
-				case "MVSCAN":
-					if(digit < 0)
-						throw new IllegalArgumentException("No digit was passed");
-					if (appendix.equals(""))
-						throw new IllegalArgumentException("No appendix was passed");
+//					if(digit < 0)
+//						throw new IllegalArgumentException("No digit was passed");
+//					if (appendix.equals(""))
+//						throw new IllegalArgumentException("No appendix was passed");
 					this.rm.move(digit, true);
 					break;
 				
 				case "rotate":
-				case "ROTATE":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
 					if (appendix.equals(""))
@@ -780,35 +1028,30 @@ public class Bodenstation {
 					break;
 	
 				case "exit":
-				case "EXIT":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
 					this.rm.exitRover(digit);
 					break;
 	
 				case "getpos":
-				case "GETPOS":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
 					this.rm.getPos(digit);
 					break;
 	
 				case "charge":
-				case "CHARGE":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
 					this.rm.charge(digit);
 					break;
 					
 				case "getcharge":
-				case "GETCHARGE":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
 					this.rm.getCharge(digit);
 					break;
 					
 				case "autopilot":
-				case "AUTOPILOT":
 					if(digit < 0)
 						throw new IllegalArgumentException("No digit was passed");
 					if (appendix.equals(""))
@@ -840,15 +1083,7 @@ public class Bodenstation {
 		
 	}
 
-	/*
-	 * @brief: Looks for new content within the buffer. If new content is detected it handles it
-	 */
-	public void showError(String error)
-	{
-		SwingUtilities.invokeLater(() -> {
-	        JOptionPane.showMessageDialog(null, "Following error occurred: " + error, "Error", JOptionPane.ERROR_MESSAGE);
-	    });
-	}
+	
 
 	/*
 	 * @brief: reads the user input
@@ -894,196 +1129,14 @@ public class Bodenstation {
 	}
 
 	
-	/*
-	 * @brief: reacts to the answers of the rover server saved into the buffer
-	 */
-	private void updateBuffer()
-	{
-		JSONObject entry = new JSONObject();
-		do
-		{
-			entry = this.buffer.poll();
-		}while (entry == null);
-		String type = entry.getString("type");
-		boolean success = entry.getBoolean("success");
-		int highestA_id = this.getNewHighestPrimaryKey("a_id", "lastActivity");
-		this.dm.insertLastActivity(highestA_id, type, success);
-		int highestS_id = this.getNewHighestPrimaryKey("s_id", "statusHistory");
-		switch (type) 
-		{
-			case "DEPLOY":
-				if(this.planet < 0)
-				{
-					this.planet = this.convertPlanetStringToInt(entry.getString("planet"));
-				}
-				this.dm.insertRover(entry.getInt("id"), "rover", this.planet, -1, 1, -1 , -1, -1, -1, LocalDateTime.now(), "rover deployed", -1, -1);
-				this.dm.insertStatusHistory(highestS_id, entry.getInt("id"), highestA_id, "", entry.getBoolean("success"), "", "");
-				break;
-
-			case "MOVE":
-			case "LAND":
-				this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
-				this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
-				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
-				if (entry.getBoolean("crashed"))
-				{
-					this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), true);
-				}
-				break;
-
-
-			case "SCAN":
-				this.dm.insertGroundPosMapping(this.getNewHighestPrimaryKey("m_id", "GroundPosMapping"), this.planet, this.convertGroundStringToInt(entry.getJSONObject("scanResponse").getString("surface")), entry.getJSONObject("scanResponse").getJSONArray("Coords").getInt(0), entry.getJSONObject("scanResponse").getJSONArray("Coords").getInt(1), entry.getJSONObject("scanResponse").getInt("Temperature"));
-				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
-				break;
-			case "MOVE_SCAN":
-				this.dm.insertGroundPosMapping(this.getNewHighestPrimaryKey("m_id", "GroundPosMapping"), this.planet, this.convertGroundStringToInt(entry.getJSONObject("scanResponse").getString("surface")), entry.getJSONObject("scanResponse").getJSONArray("Coords").getInt(0), entry.getJSONObject("scanResponse").getJSONArray("Coords").getInt(1), entry.getJSONObject("scanResponse").getInt("Temperature"));
-				this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
-				this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
-				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
-				if (entry.getBoolean("crashed"))
-				{
-					this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), true);
-				}
-				break;
-
-			case "ROTATE":
-				this.dm.updateRoverDirection(entry.getInt("direction"), entry.getInt("id"));
-				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
-				break;
-
-			case "EXIT":
-				this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), true);								// Exit = crashed
-				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
-				break;
-
-			case "GETPOS":
-				this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
-				this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
-				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
-				break;
-
-			case "CHARGE":
-				break;
-			case "GET_CHARGE":
-				this.dm.updateRoverCharge(entry.getInt("charge"), entry.getInt("id"));
-				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
-				break;
-			case "SWITCH_AUTOPILOT":
-				break;
-			case "ERROR":
-				this.dm.updateStatusHistoryLastError(entry.getInt("id"), entry.getString("errorMessage"));
-				this.dm.updateStatusHistoryErrorProtocoll(entry.getInt("id"), entry.getString("errorMessage"));
-				this.dm.updateStatusHistoryIsCrashed(entry.getInt("id"), entry.getBoolean("crashed"));
-				this.dm.updateRoverXCoord(entry.getJSONArray("position").getInt(0), entry.getInt("id"));
-				this.dm.updateRoverYCoord(entry.getJSONArray("position").getInt(1), entry.getInt("id"));
-				this.dm.updateStatusHistoryActivityId(entry.getInt("id"), highestA_id);
-				this.showError(entry.getString("errorMessage"));
-				break;
-
-			default:
-				System.err.println("Invalid answer: "+ type);
-				break;
-		}
-
-	}
-
-	public int getNewHighestPrimaryKey(String table, String searchedKey) throws IllegalArgumentException 
-	{
-		int highestKey = this.dm.getHighestPrimaryKey(table, searchedKey);
-		
-		if(highestKey > 0)
-		{
-			return highestKey + 1;
-		}
-
-		else
-		{
-			throw new IllegalArgumentException("No highest Primary Key was found");
-		}
-	}
-
-	public int convertPlanetStringToInt(String planet)
-	{
-		switch(planet)
-		{
-			case "default":
-				return 0;
-			
-			case "io":
-				return 1;
-
-			case "pandora":
-				return 2;
-			default:
-				break;
-		}
-		return -1;
-	}
-
-	public int convertGroundStringToInt(String ground)
-	{
-		switch(ground)
-		{
-			case "nichts":
-				return 0;
-			
-			case "sand":
-				return 1;
-
-			case "geroell":
-				return 2;
-			
-			case "fels":
-				return 3;
-			
-			case "wasser":
-				return 4;
-			
-			case "pflanzen":
-				return 5;
-			
-			case "morast":
-				return 6;
-			
-			case "lava":
-				return 7;
-			
-			default:
-				break;
-		}
-		return -1;
-	}
-
-	public int convertDirectionStringToInt(String direction)
-	{
-		switch(direction)
-		{
-			case "north":
-				return 0;
-			
-			case "west":
-				return 1;
-
-			case "east":
-				return 2;
-			
-			case "south":
-				return 3;
-						
-			default:
-				break;
-		}
-		return -1;
-	}
 	
-	public static void main(String[] args) {
-		Bodenstation bs = new Bodenstation("", 0, "localhost:3306", "root", "Kevin");
-		DatabaseManager dm = new DatabaseManager("jdbc:mysql://localhost:3306/exoplanet?useSSL=false&serverTimezone=UTC", "root", "Kevin");
-		bs.initializeGUI();
-		bs.updateBuffer();
-		
-	}
+
+	
+	
+//	public static void main(String[] args) {
+//		bs = new Bodenstation("localhost", 12345, "localhost:3306", "root", "1182");		
+//		bs.initializeGUI();
+//	}
 
 
 }
