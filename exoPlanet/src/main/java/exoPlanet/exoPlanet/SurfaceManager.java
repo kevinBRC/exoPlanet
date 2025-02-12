@@ -93,12 +93,6 @@ public class SurfaceManager
         int distance = Math.abs(xPos - roverX) + Math.abs(yPos - roverY);
         return (float) (5 * (Math.log10(distance + 1) / Math.log10(11)));
     }
-
-	public SurfaceProperties getCurrentField() 
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
 	
 	public Collection<SurfaceProperties> getAllFields() 
 	{
